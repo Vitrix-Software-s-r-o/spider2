@@ -96,7 +96,7 @@ const config = {
                 label: 'Tutorial',
                 to: '/docs/intro',
               },
-              {
+              /*{
                 label: 'Building APIs',
                 to: '/docs/apis',
               },
@@ -104,12 +104,12 @@ const config = {
                 label: 'Middleware',
                 to: '/docs/middleware',
               }
-            ],
+*/            ],
           },
           {
             title: 'Architecture',
             items: [
-              {
+            /*  {
                 label: 'Routing',
                 to: '/docs/routing',
               },
@@ -120,16 +120,16 @@ const config = {
               {
                 label: 'Middleware',
                 to: '/docs/middleware',
-              }
+              }*/
             ],
           },
           {
             title: 'More',
             items: [
-              {
+              /*{
                 label: 'Blog',
                 to: '/blog',
-              },
+              },*/
               {
                 label: 'GitHub',
                 href: 'https://github.com/Vitrix-Software-s-r-o/spider2',
