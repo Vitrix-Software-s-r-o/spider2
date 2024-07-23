@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitrix Software, s.r.o | TestProj</title>
+    <link rel="stylesheet" href="https://stackedit.io/style.css"/>
+</head>
+
+<body class="stackedit">
+<div class="stackedit__html"><h1 id="vitrix-software-s.r.o.---testproj">Vitrix Software, s.r.o. | TestProj</h1>
+    <h2 id="specification">Specification</h2>
+    <p>The goal is to implement a simple stopwatch application. You can use any front end library that suits you. To
+        keep the application state use the Redux library. Make React components in reusable manner.</p>
+    <p>Commit as you go (in logical groups) and when you are done post us a GitHub repo to <a
+            href="mailto:jan@vitrix.cz">jan@vitrix.cz</a> and the time duration you have spent on the problem.</p>
+    <h3 id="basic-features">Basic features</h3>
+    <ul>
+        <li>To be able to use up to 10 stopwatches simultaneously.</li>
+        <li>To be able to select focused stopwatch that will become more visible at the screen.</li>
+        <li>Create component to Start - Pause - Reset stopwatch.</li>
+        <li>Stopwatch should be displayed in the format HH:MM:SS.sss.</li>
+        <li>Refresh their state on the screen in the most effective way.</li>
+        <li>When stopwatches are not focused refresh their state only in second precision.</li>
+        <li>User should be able to give stop watches unique name.</li>
+        <li>Use flexbox or css grid to divide screen into useful regions.</li>
+    </ul>
+    <h3 id="advanced-features">Advanced features</h3>
+    <ul>
+        <li>
+            <p>You can save stopwatch state with the name to:</p>
+            <ul>
+                <li>POST <code>https://example.vitrix.cz/api/&lt;yourname&gt;</code></li>
+                <li>JSON format: <code>{"start_time": &lt;number&gt;, "elapsed_time": &lt;number&gt;, "name": &lt;string&gt;}</code>
+                </li>
+                <li>The API allows to store 10 records that have unique names.
+                    <ul>
+                        <li>200 - success</li>
+                        <li>417 - validation errors</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <p>When the user refreshes the web page it should load up stored stop watches from API</p>
+            <ul>
+                <li>GET <code>https://example.vitrix.cz/api/&lt;yourname&gt;</code></li>
+                <li>It returns JSON:
+                    <ul>
+                        <li><code>{ &lt;record name&gt; : {"start_time": &lt;number&gt;, "elapsed_time": &lt;number&gt;,
+                            "name": &lt;string&gt;}, ...}</code></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <p>User can remove record by API:</p>
+            <ul>
+                <li><code>DELETE https://example.vitrix.cz/api/&lt;yourname&gt;?name=&lt;record name&gt;</code></li>
+                <li>404 - when not found</li>
+            </ul>
+            <p>APIs returns status and error messages that should be presented to the end user.</p>
+        </li>
+    </ul>
+</div>
+</body>
+
+</html>

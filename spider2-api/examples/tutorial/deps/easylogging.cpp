@@ -1,0 +1,4 @@
+#ifdef SPIDER2_API_USE_VITRIX_COMMONS
+#include <easylogging++.h>
+INITIALIZE_EASYLOGGINGPP
+#endif
