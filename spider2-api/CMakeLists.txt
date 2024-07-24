@@ -50,14 +50,10 @@ if (NOT TARGET ${target})
         )
 
         target_link_libraries(${target}-tests ${target} spider2-testing catch ${EXE_LIBS})
-        if (SPIDER2_EXE_STATIC_RUNTIME)
-            target_link_options(${target}-tests PRIVATE -static -static-libgcc -static-libstdc++)
-        endif ()
-
         target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
     endif ()
 endif ()
 
-if (SPIDER2_ENABLE_EXAMPLES)
+if (SPIDER2_EXAMPLES)
     add_subdirectory(examples)
 endif ()

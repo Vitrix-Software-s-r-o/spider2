@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(spider2 CXX)
 
-option(SPIDER2_ENABLE_EXAMPLES "Enable building of examples" OFF)
-option(SPIDER2_EXE_STATIC_RUNTIME "Use static runtime" OFF)
+option(SPIDER2_EXAMPLES "Enable building of examples" OFF)
 option(SPIDER2_COMPRESS "Spider2 compress middleware" OFF)
 option(SPIDER2_TRACY "Tracy middleware for" OFF)
 option(SPIDER2_TESTS "Enable building of tests" OFF)

@@ -11,9 +11,10 @@ if (NOT TARGET ${target})
     MESSAGE(STATUS "spider2-react:${CMAKE_CURRENT_SOURCE_DIR}")
 
     target_link_libraries(${target} INTERFACE spider2-proxy)
-
-    add_executable(${target}-example examples/main.cpp)
-    target_link_libraries(${target}-example ${target} ${EXE_LIBS})
+    if (SPIDER2_EXAMPLES)
+        add_executable(${target}-example examples/main.cpp)
+        target_link_libraries(${target}-example ${target} ${EXE_LIBS})
+    endif ()
 endif ()
 
 option(SPIDER2_REACT_ENABLE_REACT_APP_BUILD "Enable building of examples" ON)

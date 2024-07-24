@@ -83,21 +83,19 @@ if (NOT TARGET ${target})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
 
     if (SPIDER2_TESTS)
-    add_executable(${target}-tests
-            tests/utils_tests.cpp
-            tests/main.cpp
-            tests/request_routing_tests.cpp
-            tests/mime_table_tests.cpp
-            tests/async_file_tests.cpp
-            tests/tag_invoke_tests.cpp
-            tests/api_request_tests.cpp
-            tests/tuple_tests.cpp
-    )
-    target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing catch ${EXE_LIBS})
-    target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+        add_executable(${target}-tests
+                tests/utils_tests.cpp
+                tests/main.cpp
+                tests/request_routing_tests.cpp
+                tests/mime_table_tests.cpp
+                tests/async_file_tests.cpp
+                tests/tag_invoke_tests.cpp
+                tests/api_request_tests.cpp
+                tests/tuple_tests.cpp
+        )
 
-    if (SPIDER2_EXE_STATIC_RUNTIME)
-        target_link_options(${target}-tests PRIVATE -static -static-libgcc -static-libstdc++)
-    endif ()
+        target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing catch ${EXE_LIBS})
+        target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+
     endif ()
 endif ()
