@@ -1,5 +1,5 @@
 #include "spider2/types/utils/http_date.h"
-#include "base64/base64.h"
+#include "base64.h"
 #include <sstream>
 
 using namespace boost;
@@ -66,13 +66,13 @@ std::string spider2::format_http_date(const boost::posix_time::ptime &time)
 std::string spider2::format_etag_from_time_point(const std::chrono::system_clock::time_point &time)
 {
    auto time_time_t = std::chrono::system_clock::to_time_t(time);
-   return base64_encode(reinterpret_cast<std::uint8_t *>(&time_time_t), sizeof(time_time_t));
+   return base64::encode({reinterpret_cast<const char *>(&time_time_t), sizeof(time_time_t)});
 }
 
 std::string spider2::format_etag_from_time_point(const boost::posix_time::ptime &time)
 {
    auto time_time_t = to_time_t(time);
-   return base64_encode(reinterpret_cast<std::uint8_t *>(&time_time_t), sizeof(time_time_t));
+   return base64::encode({reinterpret_cast<const char *>(&time_time_t), sizeof(time_time_t)});
 }
 
 std::chrono::system_clock::time_point spider2::to_std(const boost::posix_time::ptime &time)

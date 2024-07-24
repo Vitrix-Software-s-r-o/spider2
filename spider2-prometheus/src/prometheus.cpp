@@ -19,17 +19,17 @@ namespace spider2::prometheus
         {
             if (!label.help.empty())
             {
-                fmt::format_to(buffer, "# HELP {} {}\n", label.name, label.help);
+                fmt::format_to(std::back_inserter(buffer), "# HELP {} {}\n", label.name, label.help);
             }
-            fmt::format_to(buffer, "# TYPE {} {}\n", label.name, type_name);
+            fmt::format_to(std::back_inserter(buffer), "# TYPE {} {}\n", label.name, type_name);
 
             if (label.labels.empty())
             {
-                fmt::format_to(buffer, "{} {}\n", label.name, value);
+                fmt::format_to(std::back_inserter(buffer), "{} {}\n", label.name, value);
             }
             else
             {
-                fmt::format_to(buffer, "{}{{{}}} {}\n", label.name, label.labels, value);
+                fmt::format_to(std::back_inserter(buffer), "{}{{{}}} {}\n", label.name, label.labels, value);
             }
         }
 
@@ -46,20 +46,20 @@ namespace spider2::prometheus
 
                 if (!label.help.empty())
                 {
-                    fmt::format_to(buffer, "# HELP {} {}\n", bucket_label, label.help);
+                    fmt::format_to(std::back_inserter(buffer), "# HELP {} {}\n", bucket_label, label.help);
                 }
-                fmt::format_to(buffer, "# TYPE {} {}\n", bucket_label, counter::type);
+                fmt::format_to(std::back_inserter(buffer), "# TYPE {} {}\n", bucket_label, counter::type);
 
 
                 if (std::numeric_limits<typename T::bucket_type>::max() == bucket)
                 {
                     if (label.labels.empty())
                     {
-                        fmt::format_to(buffer, "{}{{le=\"+Inf\"}} {}\n", bucket_label, bucket_count);
+                        fmt::format_to(std::back_inserter(buffer), "{}{{le=\"+Inf\"}} {}\n", bucket_label, bucket_count);
                     }
                     else
                     {
-                        fmt::format_to(buffer, "{}{{le=\"+Inf\" {}} {}\n", bucket_label, label.labels, bucket_count);
+                        fmt::format_to(std::back_inserter(buffer), "{}{{le=\"+Inf\" {}}} {}\n", bucket_label, label.labels, bucket_count);
                     }
                     break;
                 }
@@ -67,11 +67,11 @@ namespace spider2::prometheus
 
                 if (label.labels.empty())
                 {
-                    fmt::format_to(buffer, "{}{{le=\"{}\"}} {}\n", bucket_label, bucket, bucket_count);
+                    fmt::format_to(std::back_inserter(buffer), "{}{{le=\"{}\"}} {}\n", bucket_label, bucket, bucket_count);
                 }
                 else
                 {
-                    fmt::format_to(buffer, "{}{{le=\"{}\" {}} {}\n", bucket_label, label.labels, bucket, bucket_count);
+                    fmt::format_to(std::back_inserter(buffer), "{}{{le=\"{}\" {}}} {}\n", bucket_label, label.labels, bucket, bucket_count);
                 }
             }
 

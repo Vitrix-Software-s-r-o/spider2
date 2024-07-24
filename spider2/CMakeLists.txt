@@ -71,9 +71,11 @@ endif ()
 
 if (NOT TARGET ${target})
     add_library(${target} STATIC ${spider2_Sources} ${spider2_OS})
-    target_link_libraries(${target} PUBLIC fmt::fmt Microsoft.GSL::GSL aklomp::base64 ${Boost_LIBRARIES})
+    target_link_libraries(${target} PUBLIC fmt::fmt Microsoft.GSL::GSL ${Boost_LIBRARIES})
+
     target_include_directories(${target} PUBLIC ${Boost_INCLUDE_DIR})
     target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_include_directories(${target} PRIVATE ${CPP_BASE64_INCLUDE_DIRS})
     target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
     add_executable(${target}-example main.cpp)

@@ -57,16 +57,18 @@ spider2::vector<spider2::string> spider2::prepare_byte_range_boundaries(const sp
          buffer.append(middle_boundary_prefix);
 
       buffer.append(boundary);
-      fmt::format_to(buffer, "\r\nContent-Type:", content_type);
+
+
+      fmt::format_to(std::back_inserter(buffer), "\r\nContent-Type: {}", fmt::string_view{content_type.data(), content_type.size()});
 
       byte_range const &range = ranges[i];
-      fmt::format_to(buffer, "\r\nContent-Range: bytes {}-{}/{}\r\n\r\n", range.offset_begin,
+      fmt::format_to(std::back_inserter(buffer), "\r\nContent-Range: bytes {}-{}/{}\r\n\r\n", range.offset_begin,
                      range.offset_end.value_or(file_size - 1), file_size);
 
       result.push_back(fmt::to_string(buffer));
       buffer.clear();
    }
-   fmt::format_to(buffer, "{}{}{}", middle_boundary_prefix, boundary, last_boundary_suffix);
+   fmt::format_to(std::back_inserter(buffer), "{}{}{}", middle_boundary_prefix, boundary, last_boundary_suffix);
    result.push_back(fmt::to_string(buffer));
    return result;
 }
