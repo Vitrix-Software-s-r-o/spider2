@@ -30,13 +30,14 @@ if (NOT TARGET ${target})
     MESSAGE(STATUS "spider2-api:${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(${target} INTERFACE spider2)
 
-    if (TARGET commons)
-        #enables support for vitrix commons serialization library
-        target_link_libraries(${target} INTERFACE commons)
-        target_compile_definitions(${target} INTERFACE SPIDER2_API_USE_VITRIX_COMMONS)
-        option(SPIDER2_API_USE_VITRIX_COMMONS "Use vitrix commons serialization library" ON)
-    else ()
-        option(SPIDER2_API_USE_VITRIX_COMMONS "Use vitrix commons serialization library" OFF)
+    if (SPIDER2_INTEGRATE_VITRIX_SERIALIZATION)
+        if (TARGET commons)
+            #enables support for vitrix commons serialization library
+            target_link_libraries(${target} INTERFACE commons)
+            target_compile_definitions(${target} INTERFACE SPIDER2_API_USE_VITRIX_COMMONS)
+        else ()
+            message(FATAL_ERROR "Vitrix serialization is enabled but commons library is not found")
+        endif ()
     endif ()
 
     if (SPIDER2_TESTS)

@@ -2,10 +2,16 @@ cmake_minimum_required(VERSION 3.20)
 project(spider2 CXX)
 
 option(SPIDER2_EXAMPLES "Enable building of examples" OFF)
+
+# this is enables return brotli compression middleware
 option(SPIDER2_COMPRESS "Spider2 compress middleware" OFF)
+
+# this is integrates with Tracy profiler with feature fibers enabled
 option(SPIDER2_TRACY "Tracy middleware for" OFF)
 option(SPIDER2_TESTS "Enable building of tests" OFF)
 
+# this is a private Vitrix Software, s.r.o. feature
+option(SPIDER2_INTEGRATE_VITRIX_SERIALIZATION "Enable building of Vitrix Software serialization library" OFF)
 
 if (NOT DEFINED CMAKE_CXX_STANDARD)
     MESSAGE(STATUS "CMAKE_CXX_STANDARD NOT SET: DEFAULTING TO C++20")
