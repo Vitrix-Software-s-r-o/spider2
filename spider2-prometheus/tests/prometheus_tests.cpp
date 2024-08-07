@@ -67,18 +67,18 @@ TEST_CASE("prometheus class", "[prometheus]")
 
         auto result = manager.format_metrics();
         REQUIRE(result ==
-                R"(# HELP histogram_bucket histogram help
+        R"(# HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
 histogram_bucket{le="1.5"} 3
 # HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
-histogram_bucket{le="5.5"} 3
+histogram_bucket{le="5.5"} 6
 # HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
-histogram_bucket{le="10.5"} 2
+histogram_bucket{le="10.5"} 8
 # HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
-histogram_bucket{le="+Inf"} 1
+histogram_bucket{le="+Inf"} 9
 # HELP histogram_sum histogram help
 # TYPE histogram_sum counter
 histogram_sum 43.5
@@ -106,18 +106,18 @@ histogram_count 9
 
         auto result = manager.format_metrics();
         REQUIRE(result ==
-                R"(# HELP histogram_bucket histogram help
+        R"(# HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
 histogram_bucket{le="1"} 3
 # HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
-histogram_bucket{le="5"} 3
+histogram_bucket{le="5"} 6
 # HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
-histogram_bucket{le="10"} 2
+histogram_bucket{le="10"} 8
 # HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
-histogram_bucket{le="+Inf"} 1
+histogram_bucket{le="+Inf"} 9
 # HELP histogram_sum histogram help
 # TYPE histogram_sum counter
 histogram_sum 43
