@@ -57,6 +57,7 @@ set(spider2_Sources
         include/spider2/routing/api_endpoint/format_api_response.h
         src/base64.h
         src/base64.cpp
+        include/spider2/handlers/websocket.h
 )
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
