@@ -94,7 +94,7 @@ if (NOT TARGET ${target})
                 tests/tuple_tests.cpp
         )
 
-        target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing catch ${EXE_LIBS})
+        target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing ${EXE_LIBS})
         target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
     endif ()

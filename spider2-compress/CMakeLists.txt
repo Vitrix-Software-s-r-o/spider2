@@ -17,7 +17,7 @@ if (NOT TARGET ${target})
 
     if (SPIDER2_TESTS)
         add_executable(${target}-tests tests/main.cpp tests/compresss_tests.cpp)
-        target_link_libraries(${target}-tests ${target} catch ${EXE_LIBS})
+        target_link_libraries(${target}-tests ${target} spider2-testing ${EXE_LIBS})
         target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
     endif ()
 endif ()
