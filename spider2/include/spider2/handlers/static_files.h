@@ -14,7 +14,7 @@ namespace spider2
       cache_control caching = cache_control::make_cache_public();
       mime_table mime_types = {};
       vector<string> index_files = {};
-      std::function<bool(request &, filesystem::path const &path)> file_path_filter;
+      std::function<bool(request &, filesystem::path const &path)> file_path_filter = {};
    };
 
    inline auto static_files(filesystem::path folder, static_files_config config = {})
@@ -26,7 +26,7 @@ namespace spider2
          {
 
             if (std::string file_name;
-                url::try_decode(file_name, ep.path.begin(), ep.path.end()) && file_name.find("..") == std::string::npos)
+               url::try_decode(file_name, ep.path.begin(), ep.path.end()) && file_name.find("..") == std::string::npos)
             {
                auto full_path = folder / file_name;
                if (filesystem::is_directory(full_path) && !config.index_files.empty())
@@ -48,9 +48,9 @@ namespace spider2
                if (!config.file_path_filter || config.file_path_filter(req, full_path))
                {
                   co_return return_file(
-                      req, full_path,
-                      file_response_settings{.mime_type = config.mime_types.lookup(full_path.extension().string()),
-                                             .cache = config.caching});
+                     req, full_path,
+                     file_response_settings{.mime_type = config.mime_types.lookup(full_path.extension().string()),
+                                            .cache = config.caching});
                }
             }
 

@@ -23,12 +23,6 @@ struct custom_type
 
 namespace
 {
-   auto make_req(const std::string &path_with_query)
-   {
-      static app_context_base app_context;
-      return request{http::request<http::empty_body>{verb::get, path_with_query, 11}, app_context};
-   }
-
    auto make_str_req(const std::string &path_with_query, const std::string &body, const std::string &content_type)
    {
       auto message = http::request<http::string_body>{verb::post, path_with_query, 11};
@@ -42,19 +36,27 @@ namespace
    auto make_const_value_ref_api()
    {
       return begin_app() + on_api_post("/const_value_ref", [](api::from_body<custom_type> const &value)
-                                       { return api::result{value.value}; });
+      {
+         return api::result{value.value};
+      });
    };
 
    auto make_value_ref_api()
    {
       return begin_app() +
-             on_api_post("/value_ref", [](api::from_body<custom_type> &value) { return api::result{value.value}; });
+             on_api_post("/value_ref", [](api::from_body<custom_type> &value)
+             {
+                return api::result{value.value};
+             });
    };
 
    auto make_value_api()
    {
       return begin_app() +
-             on_api_post("/value", [](api::from_body<custom_type> value) { return api::result{value.value}; });
+             on_api_post("/value", [](api::from_body<custom_type> value)
+             {
+                return api::result{value.value};
+             });
    };
 } // namespace
 

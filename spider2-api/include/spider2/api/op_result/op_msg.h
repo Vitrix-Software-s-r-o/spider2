@@ -5,6 +5,7 @@
 #pragma once
 #include "flat_value.h"
 #include <spider2/types.h>
+
 namespace spider2::api
 {
    enum class op_msg_severity
@@ -33,6 +34,7 @@ namespace spider2::api
          break;
       }
    }
+
    /**
     * @brief This struct is used to represent a message that is sent to the user.
     */
@@ -47,16 +49,16 @@ namespace spider2::api
       /**
        * @brief The tokens that are used to fill in the message.
        */
-      vector<flat_value> tokens;
+      vector<flat_value> tokens = {};
 
       /**
        * @brief The severity of the message.
        */
-      optional<op_msg_severity> severity;
+      optional<op_msg_severity> severity = {};
 
       friend void tag_invoke(boost::json::value_from_tag, boost::json::value &jv, op_msg const &msg)
       {
-         jv = {{"message", boost::json::string{msg.message}}, {"tokens", boost::json::value_from( msg.tokens)}};
+         jv = {{"message", boost::json::string{msg.message}}, {"tokens", boost::json::value_from(msg.tokens)}};
 
          if (msg.severity.has_value())
          {

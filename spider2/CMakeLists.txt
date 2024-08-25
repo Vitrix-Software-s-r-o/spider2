@@ -86,7 +86,6 @@ if (NOT TARGET ${target})
     if (SPIDER2_TESTS)
         add_executable(${target}-tests
                 tests/utils_tests.cpp
-                tests/main.cpp
                 tests/request_routing_tests.cpp
                 tests/mime_table_tests.cpp
                 tests/async_file_tests.cpp
@@ -95,7 +94,7 @@ if (NOT TARGET ${target})
                 tests/tuple_tests.cpp
         )
 
-        target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing ${EXE_LIBS})
+        target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})
         target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
     endif ()

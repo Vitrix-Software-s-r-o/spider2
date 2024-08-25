@@ -21,9 +21,9 @@ namespace spider2::api
    struct op_result
    {
       using self_t = op_result<T>;
-      optional<T> value;
-      optional<op_msg> message;
-      optional<vector<op_field_msg>> field_messages;
+      optional<T> value = {};
+      optional<op_msg> message = {};
+      optional<vector<op_field_msg>> field_messages = {};
 
       inline static result<self_t> make_success_result(optional<T> value = {}, op_msg message = {"T:operation.success"})
       {

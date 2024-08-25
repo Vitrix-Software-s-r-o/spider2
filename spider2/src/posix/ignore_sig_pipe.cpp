@@ -9,6 +9,5 @@ void spider2::ignore_sig_pipe() noexcept
    struct sigaction sa;
    std::memset(&sa, 0, sizeof(sa));
    sa.sa_handler = SIG_IGN;
-   int res = sigaction(SIGPIPE, &sa, NULL);
-   assert(res == 0);
+   static_cast<void>(sigaction(SIGPIPE, &sa, NULL));
 }

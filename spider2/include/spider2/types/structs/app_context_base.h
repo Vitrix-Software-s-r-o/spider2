@@ -12,7 +12,7 @@ namespace spider2
 {
    class start_indicator
    {
-    public:
+   public:
       inline void set_configured_threads(int threads)
       {
          configured_threads = threads;
@@ -30,19 +30,25 @@ namespace spider2
       inline auto wait_for_all_threads_started() const -> bool
       {
          auto lock = std::unique_lock{m_};
-         cv_.wait(lock, [&] { return running_threads == configured_threads; });
+         cv_.wait(lock, [&]
+         {
+            return running_threads == configured_threads;
+         });
          return true;
       }
 
       inline auto wait_for_all_threads_started(std::stop_token token) const -> bool
       {
          auto lock = std::unique_lock{m_};
-         cv_.wait(lock, [&] { return running_threads == configured_threads || token.stop_requested(); });
+         cv_.wait(lock, [&]
+         {
+            return running_threads == configured_threads || token.stop_requested();
+         });
 
          return running_threads == configured_threads;
       }
 
-    private:
+   private:
       mutable std::mutex m_;
       mutable std::condition_variable cv_;
       int running_threads = 0;
@@ -51,15 +57,16 @@ namespace spider2
 
    class server_event_handler
    {
-    public:
+   public:
       virtual ~server_event_handler() = default;
       virtual auto on_io_thread_exception(std::exception const *ex) noexcept -> void;
+      virtual auto on_app_error(std::exception const *ex) noexcept -> void;
    };
 
    struct app_context_base
    {
       std::stop_token token;
-      start_indicator lifecycle_indicator;
+      start_indicator lifecycle_indicator = {};
 
       server_event_handler *event_handler = nullptr;
    };
