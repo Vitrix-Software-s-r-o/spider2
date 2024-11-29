@@ -1,0 +1,12 @@
+# docker-compose.yml
+
+services:
+  spider2-tests:
+    image: spider2-tests:latest
+    build:
+      context: ../..
+      dockerfile: ./containers/spider2-tests/Dockerfile
+      platforms:
+        - "linux/amd64"
+#        - "linux/arm64"
+

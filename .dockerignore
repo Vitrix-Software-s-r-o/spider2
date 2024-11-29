@@ -1,0 +1,8 @@
+cmake-build-*/
+containers/
+!containers/spider2-tests/run-all-tests.sh
+docs/
+.github/
+.idea/
+.git/
+LICENSE.txt

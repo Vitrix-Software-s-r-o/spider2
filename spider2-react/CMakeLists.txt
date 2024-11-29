@@ -58,9 +58,11 @@ function(spider2_react_add_react_app_yarn target react_app_dir)
     )
 endfunction()
 
+if (SPIDER2_EXAMPLES)
 if (SPIDER2_REACT_ENABLE_REACT_APP_BUILD)
     if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         spider2_react_add_react_app_npm(${target}-example
                 ${CMAKE_CURRENT_SOURCE_DIR}/examples/example_app)
     endif ()
+endif ()
 endif ()

@@ -1,0 +1,12 @@
+# docker-compose.yml
+
+services:
+  spider2-build:
+    image: docker.vitrix.cz/spider2-build:latest
+    build:
+      context: ../..
+      dockerfile: ./containers/spider2-build/Dockerfile
+      platforms:
+        - "linux/amd64"
+#        - "linux/arm64"
+

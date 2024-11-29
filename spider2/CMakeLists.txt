@@ -75,9 +75,11 @@ if (NOT TARGET ${target})
     target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+    if (SPIDER2_ENABLE_EXAMPLES)
     add_executable(${target}-example main.cpp)
     target_link_libraries(${target}-example spider2 ${EXE_LIBS})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
+    endif ()
 
     if (SPIDER2_TESTS)
     add_executable(${target}-tests
