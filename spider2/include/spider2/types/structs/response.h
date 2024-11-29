@@ -57,6 +57,7 @@ namespace spider2
          /// true - marks file for deletion
          bool delete_file_after_write = false;
       };
+
       response_settings settings = {};
    };
 
@@ -78,6 +79,7 @@ namespace spider2
          std::uint64_t file_size = 0;
          bool write_body = true;
       };
+
       response_settings settings = {};
    };
 
@@ -88,8 +90,8 @@ namespace spider2
 
    struct response
    {
-      response_type message;
-      optional<std::chrono::steady_clock::duration> keep_alive;
+      response_type message = {};
+      optional<std::chrono::steady_clock::duration> keep_alive = {};
 
       inline auto async_write(tcp::socket &socket) noexcept -> io::awaitable<tuple<error_code, size_t>>
       {
@@ -239,6 +241,7 @@ namespace spider2
             response.set(http::field::keep_alive, fmt::format("timeout={}", keep_alive_to_send.count()));
          }
       }
+
       /// this method allows to update all properties of underlying http::response<?>
       template <class Fun>
       auto visit_update(Fun &&updater) -> decltype(updater(const_cast<http::response<http::empty_body> &>(test_obj)))
@@ -292,7 +295,7 @@ namespace spider2
              message);
       }
 
-      auto get_status() const -> http::status const
+      [[nodiscard]] auto get_status() const -> http::status
       {
          auto status = visit_read([](auto &msg) -> optional<http::status> { return {msg.result()}; });
          return status.value_or(http::status::not_found);
@@ -344,6 +347,26 @@ namespace spider2
                            message);
       }
 
+      inline auto set_header(http::field header, string_view value) -> void
+      {
+         std::visit(overload{[](with_no_response &) { throw std::out_of_range{"No response to set header"}; },
+                             [&](auto &msg) {
+                                msg.set(header, boost::beast::string_view{value.data(), value.size()});
+                             }},
+                    message);
+      }
+
+      inline auto set_header(string_view header, string_view value) -> void
+      {
+         std::visit(overload{[](with_no_response &) { throw std::out_of_range{"No response to set header"}; },
+                             [&](auto &msg)
+                             {
+                                msg.set(boost::beast::string_view{header.data(), header.size()},
+                                        boost::beast::string_view{value.data(), value.size()});
+                             }},
+                    message);
+      }
+
       template <class Body = http::empty_body>
       static auto make_response_message(http::status status) -> http::response<Body>
       {
@@ -356,7 +379,7 @@ namespace spider2
       inline static auto return_redirect(string url) -> response
       {
          auto message = make_response_message(http::status::see_other);
-         message.set(http::field::location, std::move(url));
+         message.set(http::field::location, url);
 
          return {message};
       }
@@ -372,7 +395,7 @@ namespace spider2
                copy_headers_to_message(custom_headers.value(), message);
             }
 
-            message.set(http::field::content_type, std::move(content_type));
+            message.set(http::field::content_type, content_type);
             message.set(http::field::content_length, fmt::to_string(body.size()));
             message.body() = std::move(body);
             return {message};
@@ -384,7 +407,7 @@ namespace spider2
             {
                copy_headers_to_message(custom_headers.value(), message);
             }
-            message.set(http::field::content_type, std::move(content_type));
+            message.set(http::field::content_type, content_type);
             if (status != http::status::not_modified)
             {
                message.set(http::field::content_length, fmt::to_string(body.size()));

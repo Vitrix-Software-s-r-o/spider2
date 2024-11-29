@@ -6,8 +6,7 @@ using namespace boost::asio::windows;
 namespace {
 
     bool is_handle_valid(HANDLE h) {
-        const std::size_t invalid_handle = -1;
-        return reinterpret_cast<std::size_t>(h) != invalid_handle;
+       return reinterpret_cast<std::size_t>(h) != std::numeric_limits<std::size_t>::max();
     }
 }
 auto spider2::async_file_io::open_binary_file(io::any_io_executor service,
@@ -28,7 +27,7 @@ auto spider2::async_file_io::get_file_size(file_handle &handle) noexcept -> std:
     memset(&result, 0, sizeof(LARGE_INTEGER));
 
     auto apiResult = GetFileSizeEx(handle.native_handle(), &result);
-    if (apiResult == 0) return -1;
+    if (apiResult == 0) return std::numeric_limits<std::uint64_t>::max();
     return static_cast<std::uint64_t>(result.QuadPart);
 }
 

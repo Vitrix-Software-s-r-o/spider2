@@ -4,6 +4,10 @@ add_executable(${target} main.cpp index.html
         json.cpp)
 target_link_libraries(${target} PRIVATE spider2-api)
 
+if (SPIDER2_EXE_STATIC_RUNTIME)
+    target_link_libraries(${target} PRIVATE -static -static-libgcc -static-libstdc++)
+endif ()
+
 #copy index.html to build directory
 add_custom_command(TARGET ${target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy

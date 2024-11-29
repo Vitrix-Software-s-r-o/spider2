@@ -2,10 +2,13 @@
 // Created by jhrub on 22.02.2023.
 //
 #include "spider2/types/utils/async_file_io.h"
-#include <fcntl.h>
 #include <fmt/format.h>
+
+#include <fcntl.h>
 #include <sys/sendfile.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace spider2::async_file_io
 {
@@ -14,7 +17,7 @@ namespace spider2::async_file_io
       template <class Handler>
       struct stream_op : std::enable_shared_from_this<stream_op<Handler>>
       {
-         stream_op(boost::asio::ip::tcp::socket &socket, int fd, off64_t start, std::int64_t len, Handler &&callback)
+         stream_op(boost::asio::ip::tcp::socket &socket, int fd, off_t start, std::int64_t len, Handler &&callback)
              : socket_(socket), fd_(fd), start_(start), count_(len), callback_(std::forward<Handler>(callback))
          {
          }
@@ -27,7 +30,7 @@ namespace spider2::async_file_io
             }
             else
             {
-               ssize_t result = ::sendfile64(socket_.native_handle(), fd_, &start_, count_);
+               ssize_t result = ::sendfile(socket_.native_handle(), fd_, &start_, count_);
                if (result == -1)
                {
                   auto code = boost::system::errc::make_error_code(static_cast<boost::system::errc::errc_t>(errno));
@@ -70,7 +73,7 @@ namespace spider2::async_file_io
 
          tcp::socket &socket_;
          int fd_;
-         off64_t start_;
+         off_t start_;
          std::int64_t count_;
 
          Handler callback_;
@@ -128,7 +131,7 @@ auto spider2::async_file_io::send_file(file_handle &handle, tcp::socket &socket,
        [&socket, &handle, offset, len](auto &&handler)
        {
           auto async_operation = std::make_shared<stream_op<std::decay_t<decltype(handler)>>>(
-              socket, handle.native_handle(), gsl::narrow_cast<off64_t>(offset), len,
+              socket, handle.native_handle(), gsl::narrow_cast<off_t>(offset), len,
               std::forward<std::decay_t<decltype(handler)>>(handler));
           async_operation->start();
        },
@@ -166,13 +169,14 @@ auto spider2::async_file_io::delete_file_on_close(file_handle &handle) noexcept 
    return result;
 }
 
-auto spider2::async_file_io::get_last_modified_time(file_handle &handle) noexcept -> spider2::optional<chrono::system_clock::time_point>
+auto spider2::async_file_io::get_last_modified_time(file_handle &handle) noexcept
+    -> spider2::optional<chrono::system_clock::time_point>
 {
-   struct stat64 stat_data
+   struct stat stat_data
    {
    };
 
-   if (fstat64(handle.native_handle(), &stat_data) != -1)
+   if (fstat(handle.native_handle(), &stat_data) != -1)
    {
       return {chrono::system_clock::from_time_t(stat_data.st_mtim.tv_sec)};
    }

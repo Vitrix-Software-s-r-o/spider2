@@ -10,13 +10,18 @@ namespace test
    {
       int a;
    };
+
    struct context_b
    {
       double a;
    };
+
    struct request
    {
-      explicit request(int x) : x(x) {}
+      explicit request(int x)
+         : x(x)
+      {
+      }
 
       int x;
    };
@@ -45,7 +50,7 @@ TEST_CASE("tuple type contains", "[utils]")
 
    auto a = context_a{10};
    const auto b = context_b{10.0};
-   [](auto &&...ctx)
+   [](auto &&... ctx)
    {
       auto tuple = std::forward_as_tuple(ctx...);
       static_assert(tuple_contains_type_v<context_a &, decltype(tuple)>);
@@ -55,6 +60,11 @@ TEST_CASE("tuple type contains", "[utils]")
       auto &val1 = std::get<const_lval_ref_t<context_b>>(tuple);
       auto &val2 = std::get<const_lval_ref_t<const context_b &>>(tuple);
       auto &val3 = std::get<const_lval_ref_t<const context_b &&>>(tuple);
+
+      static_assert(std::is_same_v<decltype(val), const context_b &>);
+      static_assert(std::is_same_v<decltype(val1), const context_b &>);
+      static_assert(std::is_same_v<decltype(val2), const context_b &>);
+      static_assert(std::is_same_v<decltype(val3), const context_b &>);
 
       static_assert(tuple_contains_type_v<const_lval_ref_t<const context_b>, decltype(tuple)>);
       static_assert(tuple_contains_type_v<const_lval_ref_t<context_b>, decltype(tuple)>);
@@ -72,12 +82,12 @@ TEST_CASE("tuple type get", "[utils]")
    auto a = context_a{10};
    const auto b = context_b{10.0};
 
-   [](auto &&...ctx)
+   [](auto &&... ctx)
    {
       auto tuple = std::forward_as_tuple(ctx...);
 
       static_assert(tuple_contains_type_v<const_lval_ref_t<const context_b>, decltype(tuple)> ||
-                        tuple_contains_type_v<lval_ref_t<const context_b>, decltype(tuple)>,
+                    tuple_contains_type_v<lval_ref_t<const context_b>, decltype(tuple)>,
                     "Tuple is not an argument tuple. It should be created by passing auto&&...args like "
                     "std::forward_as_tuple(std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)...)");
 

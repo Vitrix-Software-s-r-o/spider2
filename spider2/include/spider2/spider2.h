@@ -10,7 +10,7 @@
 #include "server.h"
 #include "types.h"
 
-#include "middleware/thread_pool_middleware.h"
+#include "middleware/exception_handling_middleware.h"
 #include <ranges>
 
 namespace spider2
@@ -97,7 +97,7 @@ namespace spider2
       if (config.thread_pool_threads > 0)
       {
          thread_pool proc_pool{get_thread_count(config.thread_pool_threads)};
-         thread_pool_middleware thread_pool_handler{proc_pool, std::move(request_processor_fun)};
+         exception_handling_middleware thread_pool_handler{proc_pool, std::move(request_processor_fun)};
          auto iot_count = get_thread_count(config.io_threads);
          for (size_t t = 0; t != iot_count; ++t)
          {
@@ -108,7 +108,8 @@ namespace spider2
       }
       else
       {
-         tcp_listen(request_processor_fun);
+         exception_handling_middleware catch_all_handler{io_loop, std::move(request_processor_fun)};
+         tcp_listen(catch_all_handler);
          block_run();
       }
    }

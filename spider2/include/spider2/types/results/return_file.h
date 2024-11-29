@@ -34,7 +34,7 @@ namespace spider2
    }
 
    inline auto return_file(request &req, filesystem::path const &file_path, file_response_settings const &setting = {})
-       -> response
+      -> response
    {
 
       if (auto file = async_file_io::open_binary_file(req.get_executor(), file_path); file.has_value())
@@ -82,13 +82,13 @@ namespace spider2
             if (byte_ranges_values.has_value() && !byte_ranges_values->empty() &&
                 validate_byte_ranges(file_size, byte_ranges_values.value()))
             {
-               auto resp = file_byte_ranges_response{
-                   .file = std::move(file.value()),
-                   .settings = {.ranges = std::move(byte_ranges_values.value()),
-                                .boundary = generate_boundary(last_write_time.value(), file_size),
-                                .file_size = file_size,
-                                .write_body = req.get_endpoint().verb != http::verb::head &&
-                                              status != resource_status::not_modified},
+               auto resp = file_byte_ranges_response{{},
+                                                     std::move(file.value()),
+                                                     {.ranges = std::move(byte_ranges_values.value()),
+                                                      .boundary = generate_boundary(last_write_time.value(), file_size),
+                                                      .file_size = file_size,
+                                                      .write_body = req.get_endpoint().verb != http::verb::head &&
+                                                                    status != resource_status::not_modified},
                };
                set_response_headers(resp);
                resp.result(http::status::partial_content);
@@ -104,11 +104,11 @@ namespace spider2
          else
          {
 
-            auto resp = file_response{
-                .file = std::move(file.value()),
-                .settings = {.file_size = file_size,
-                             .write_body = req.get_endpoint().verb != http::verb::head &&
-                                           status != resource_status::not_modified},
+            auto resp = file_response{{},
+                                      std::move(file.value()),
+                                      {.file_size = file_size,
+                                       .write_body = req.get_endpoint().verb != http::verb::head &&
+                                                     status != resource_status::not_modified},
             };
             set_response_headers(resp);
             resp.result(status == resource_status::not_modified ? http::status::not_modified : http::status::ok);

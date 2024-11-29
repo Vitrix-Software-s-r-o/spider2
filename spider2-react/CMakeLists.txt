@@ -5,15 +5,14 @@ set(spider2-react_Sources
 )
 
 if (NOT TARGET ${target})
-    find_package(Tracy REQUIRED)
     add_library(${target} INTERFACE ${spider2-react_Sources})
     target_include_directories(${target} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     MESSAGE(STATUS "spider2-react:${CMAKE_CURRENT_SOURCE_DIR}")
 
     target_link_libraries(${target} INTERFACE spider2-proxy)
     if (SPIDER2_EXAMPLES)
-        add_executable(${target}-example examples/main.cpp)
-        target_link_libraries(${target}-example ${target} ${EXE_LIBS})
+    add_executable(${target}-example examples/main.cpp)
+    target_link_libraries(${target}-example ${target} ${EXE_LIBS})
     endif ()
 endif ()
 

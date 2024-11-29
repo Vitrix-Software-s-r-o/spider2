@@ -18,6 +18,7 @@ namespace spider2
       struct honor_return_type
       {
       };
+
       struct convert_to_async
       {
       };
@@ -56,7 +57,7 @@ namespace spider2
          return any_function_adapter::apply_internal(awaitable_tag{}, fun, inputArgs);
       }
 
-    private:
+   private:
       /// This is an awaitable return type
       static auto apply_internal(std::true_type, Fun &fun, std::tuple<InputArgs...> &inputArgs)
       {
@@ -70,10 +71,12 @@ namespace spider2
 
          if constexpr (std::is_void_v<typename function_traits<Fun>::return_type>)
          {
-            auto handler = [](Fun &fun, auto &&...args) -> io::awaitable<void>
+            auto handler = [](Fun &fun, auto &&... args) -> io::awaitable<void>
             {
                auto input_args = std::forward_as_tuple(args...);
                fun(fwd_args_get<OutputArgs>(input_args)...);
+               static_cast<void>(input_args);
+
                co_return;
             };
 
@@ -81,9 +84,12 @@ namespace spider2
          }
          else
          {
-            auto handler = [](Fun &fun, auto &&...args) -> io::awaitable<typename function_traits<Fun>::return_type>
+            auto handler = [](Fun &fun, auto &&... args) -> io::awaitable<typename function_traits<Fun>::return_type>
             {
                auto input_args = std::forward_as_tuple(args...);
+
+               static_cast<void>(input_args);
+
                co_return fun(fwd_args_get<OutputArgs>(input_args)...);
             };
             return std::apply(handler, handler_args_tuple);
@@ -119,7 +125,7 @@ namespace spider2
    template <class Fun>
    auto wrap_any_function(Fun &&fun)
    {
-      return [fun = std::forward<std::decay_t<Fun>>(fun)](auto &&...ctx)
+      return [fun = std::forward<std::decay_t<Fun>>(fun)](auto &&... ctx)
       {
          using arg_tuple = typename function_traits<Fun>::arguments;
          using return_type = typename function_traits<Fun>::return_type;
@@ -143,7 +149,7 @@ namespace spider2
    template <class Fun>
    auto wrap_any_function_async(Fun &&fun)
    {
-      return [fun = std::forward<std::decay_t<Fun>>(fun)](auto &&...ctx)
+      return [fun = std::forward<std::decay_t<Fun>>(fun)](auto &&... ctx)
       {
          using arg_tuple = typename function_traits<Fun>::arguments;
          auto current_args = std::forward_as_tuple(ctx...);

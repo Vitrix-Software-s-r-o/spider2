@@ -12,6 +12,7 @@ namespace spider2
    namespace react
    {
       using custom_script_generator_callback = std::function<std::string(request &)>;
+
       struct react_config
       {
          /// The endpoint of the react server
@@ -22,21 +23,24 @@ namespace spider2
 
          /// This generator is used to append custom scripts to the react index.html
          custom_script_generator_callback script_append_generator = [](request &) -> string
-         { return "/* provide your own script_append_generator to load app context data */"; };
+         {
+            return "/* provide your own script_append_generator to load app context data */";
+         };
 
          /// The path to the react index.html file inside of the react app or the public folder in case of debug build
          boost::filesystem::path react_index_html_path;
 
          /// The public url of the react app in case of debug build - if not set, it will be generated from the request
          /// endpoint
-         optional<std::string> public_url;
+         optional<std::string> public_url = {};
       };
 
       class react_app_template_state
       {
 
-       public:
-         explicit react_app_template_state(react_config cfg) : cfg_(std::move(cfg))
+      public:
+         explicit react_app_template_state(react_config cfg)
+            : cfg_(std::move(cfg))
          {
             reload_template_if_changed();
          }
@@ -56,8 +60,8 @@ namespace spider2
             if (template_.empty())
             {
                return fmt::format(
-                   "<!doctype html><h1>Configuration error</h1> <p>React app template not found at path {}.</p>",
-                   cfg_.react_index_html_path.string());
+                  "<!doctype html><h1>Configuration error</h1> <p>React app template not found at path {}.</p>",
+                  cfg_.react_index_html_path.string());
             }
 
             const auto custom_script = cfg_.script_append_generator(req);
@@ -65,9 +69,9 @@ namespace spider2
             if (cfg_.debug_react)
             {
                boost::replace_first(
-                   template_copy, "</head>",
-                   fmt::format("<script defer src=\"http://{0}:{1}/static/js/bundle.js\"></script></head>",
-                               cfg_.endpoint.address().to_string(), cfg_.endpoint.port()));
+                  template_copy, "</head>",
+                  fmt::format("<script defer src=\"http://{0}:{1}/static/js/bundle.js\"></script></head>",
+                              cfg_.endpoint.address().to_string(), cfg_.endpoint.port()));
 
                if (cfg_.public_url.has_value())
                {
@@ -78,15 +82,15 @@ namespace spider2
                   const auto server_endpoint = req.get_request_server_tcp_endpoint();
 
                   boost::replace_all(
-                      template_copy, "%PUBLIC_URL%",
-                      fmt::format("http://{}:{}", server_endpoint.address().to_string(), server_endpoint.port()));
+                     template_copy, "%PUBLIC_URL%",
+                     fmt::format("http://{}:{}", server_endpoint.address().to_string(), server_endpoint.port()));
                }
             }
 
             return template_copy;
          }
 
-       private:
+      private:
          inline void reload_template_if_changed()
          {
             const auto last_change = last_change_;
@@ -107,7 +111,7 @@ namespace spider2
             return {iterator, std::istreambuf_iterator<char>()};
          }
 
-       private:
+      private:
          std::mutex mutex_;
          string template_ = {};
          time_t last_change_ = {};
@@ -130,9 +134,9 @@ namespace spider2
          }
 
          return [_state = std::make_shared<react_app_template_state>(cfg),
-                 _proxy_request = naive_proxy_pass({.target = {.endpoint = cfg.endpoint}}),
-                 _static_files_handler = static_files(cfg.react_index_html_path.parent_path()),
-                 debug_react = cfg.debug_react](request &_req) -> await_response
+               _proxy_request = naive_proxy_pass({.target = {.endpoint = cfg.endpoint}}),
+               _static_files_handler = static_files(cfg.react_index_html_path.parent_path()),
+               debug_react = cfg.debug_react](request &_req) -> await_response
          {
             return [](bool debug_react, request &req, std::shared_ptr<react_app_template_state> state,
                       auto &proxy_request, auto &static_files_handler) -> await_response
@@ -163,7 +167,7 @@ namespace spider2
        */
       inline auto find_debug_react_index_html(boost::filesystem::path const &exe_path,
                                               string relative_path = "../web-ui/public/index.html")
-          -> boost::filesystem::path
+         -> boost::filesystem::path
       {
          int max_depth = 10;
 

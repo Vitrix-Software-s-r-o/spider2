@@ -87,9 +87,9 @@ inline auto naive_proxy_pass(proxy_config cfg) {
       if (auto *message = req.try_get_message<http::string_body>();
           message != nullptr) {
         co_return (co_await proxy_pass_message(req, *message, cfg));
-      } else if (auto *message = req.try_get_message<http::empty_body>();
-                 message != nullptr) {
-        co_return (co_await proxy_pass_message(req, *message, cfg));
+      } else if (auto *messege_with_empty_body = req.try_get_message<http::empty_body>();
+                 messege_with_empty_body != nullptr) {
+        co_return (co_await proxy_pass_message(req, *messege_with_empty_body, cfg));
       } else {
         co_return response::return_string(
             http::status::bad_request,
