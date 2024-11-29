@@ -9,6 +9,9 @@ We support following features:
  - API parsing for HTTP query strings
  - serialization | deserialization using Boost.JSON
  - possibility to plug-in custom serialization | parsing library for api requests 
+ - ReactApp support for javascript front-end
+ - Tracing with Tracy
+ - Prometheus metrics
 
 Check out the [documention](https://spider2.vitrix.cz/)
 
