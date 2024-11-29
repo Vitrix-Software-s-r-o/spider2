@@ -11,3 +11,5 @@ We support following features:
  - possibility to plug-in custom serialization | parsing library for api requests 
 
 Check out the [documention](https://spider2.vitrix.cz/)
+
+License: Boost Sofware License - Version 1
