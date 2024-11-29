@@ -79,6 +79,7 @@ if (NOT TARGET ${target})
     target_link_libraries(${target}-example spider2 ${EXE_LIBS})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
 
+    if (SPIDER2_TESTS)
     add_executable(${target}-tests
             tests/utils_tests.cpp
             tests/main.cpp
@@ -93,5 +94,7 @@ if (NOT TARGET ${target})
     target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
     if (SPIDER2_EXE_STATIC_RUNTIME)
         target_link_options(${target}-tests PRIVATE -static -static-libgcc -static-libstdc++)
+    endif ()
+        add_test(NAME ${target}-tests COMMAND ${target}-tests)
     endif ()
 endif ()

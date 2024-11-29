@@ -39,6 +39,7 @@ if (NOT TARGET ${target})
         option(SPIDER2_API_USE_VITRIX_COMMONS "Use vitrix commons serialization library" OFF)
     endif ()
 
+    if (SPIDER2_TESTS)
     add_executable(${target}-tests
             tests/main.cpp
             tests/result_tests.cpp
@@ -54,6 +55,8 @@ if (NOT TARGET ${target})
     endif ()
 
     target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+    add_test(NAME ${target}-tests COMMAND ${target}-tests)
+    endif ()
 endif ()
 
 if (SPIDER2_ENABLE_EXAMPLES)

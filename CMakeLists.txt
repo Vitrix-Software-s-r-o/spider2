@@ -26,6 +26,9 @@ find_package(fmt CONFIG REQUIRED)
 find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 
+if (SPIDER2_TESTS)
+    enable_testing()
+endif ()
 
 add_subdirectory(spider2)
 add_subdirectory(spider2-api)
@@ -42,3 +45,5 @@ endif ()
 if (SPIDER2_TRACY)
     add_subdirectory(spider2-tracy)
 endif()
+
+
