@@ -58,6 +58,9 @@ set(spider2_Sources
         src/base64.h
         src/base64.cpp
         include/spider2/handlers/websocket.h
+        include/spider2/types/structs/websocket_connection.h
+        include/spider2/types/structs/websocket_manager.h
+
 )
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -71,7 +74,8 @@ else ()
 endif ()
 
 if (NOT TARGET ${target})
-    add_library(${target} STATIC ${spider2_Sources} ${spider2_OS})
+    add_library(${target} STATIC ${spider2_Sources} ${spider2_OS}
+            include/spider2/types/structs/websocket_handler.h)
     target_link_libraries(${target} PUBLIC fmt::fmt Microsoft.GSL::GSL ${Boost_LIBRARIES})
 
     target_include_directories(${target} PUBLIC ${Boost_INCLUDE_DIR})
