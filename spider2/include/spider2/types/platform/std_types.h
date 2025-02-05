@@ -86,4 +86,10 @@ namespace spider2
 
    template <size_t Size>
    using uint8_fixed_stack = std::stack<boost::container::static_vector<std::uint8_t, Size>>;
+
+   /// @brief Ignore unused variable.
+   template <class T>
+   void ignore_unused(T &&)
+   {
+   }
 } // namespace spider2

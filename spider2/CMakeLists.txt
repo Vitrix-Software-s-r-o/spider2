@@ -59,7 +59,9 @@ set(spider2_Sources
         src/base64.cpp
         include/spider2/handlers/websocket.h
         include/spider2/types/structs/websocket_connection.h
-        include/spider2/types/structs/websocket_manager.h
+        include/spider2/types/structs/websocket_event_handler.h
+        include/spider2/types/structs/message_queue.h
+        include/spider2/types/structs/cancelation_timer.h
 
 )
 
@@ -74,8 +76,7 @@ else ()
 endif ()
 
 if (NOT TARGET ${target})
-    add_library(${target} STATIC ${spider2_Sources} ${spider2_OS}
-            include/spider2/types/structs/websocket_handler.h)
+    add_library(${target} STATIC ${spider2_Sources} ${spider2_OS})
     target_link_libraries(${target} PUBLIC fmt::fmt Microsoft.GSL::GSL ${Boost_LIBRARIES})
 
     target_include_directories(${target} PUBLIC ${Boost_INCLUDE_DIR})

@@ -20,7 +20,9 @@ namespace spider2
     public:
       virtual ~websocket_connection() = default;
 
-      virtual auto send_message(std::string message) -> void = 0;
+      [[nodiscard]]
+      virtual auto get_data() const -> const websocket_connection_data & = 0;
+      virtual auto send_message(outgoing_message message) -> void = 0;
       virtual auto close() -> void = 0;
    };
 
