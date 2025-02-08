@@ -13,13 +13,13 @@ namespace spider2
    {
 
       static std::atomic<std::uint64_t> id_counter;
-      vector<char> buffer = {};
+      flat_buffer buffer;
 
       websocket_event_handler &handler;
       websocket_connection_data data;
       websocket::stream<tcp::socket> websocket;
 
-      message_queue outgoing_messages = {};
+      message_queue outgoing_messages;
       std::stop_source stop_source = {};
       websocket_settings settings;
 
@@ -29,7 +29,7 @@ namespace spider2
                                           websocket::stream<tcp::socket> ws, websocket_settings settings)
           : handler(handler),
             data{.id = id_counter++, .url_endpoint = static_cast<std::string>(ep.path), .fields = std::move(fields)},
-            websocket{std::move(ws)}, settings(settings)
+            websocket{std::move(ws)}, outgoing_messages(websocket.get_executor()), settings(settings)
       {
          websocket.set_option(websocket::stream_base::timeout::suggested(role_type::server));
          buffer.reserve(4096);
@@ -57,11 +57,18 @@ namespace spider2
              ptr->settings.recv_timeout.has_value() ? ptr->settings.recv_timeout.value()
                                                     : std::numeric_limits<std::chrono::steady_clock::duration>::max());
 
+         const auto watchdog =
+             std::stop_callback{ptr->stop_source.get_token(), [ptr]()
+                                {
+                                   boost::system::error_code ec;
+                                   ptr->websocket.next_layer().shutdown(boost::asio::socket_base::shutdown_receive, ec);
+                                }};
+
          while (!ptr->stop_source.stop_requested())
          {
             auto io_watchdog =
                 watchdog_timer.start_watchdog([ptr]() { ptr->close_reason = websocket_close_reason::recv_timeout; });
-            const auto [ec, len] = co_await ptr->websocket.async_read(io::buffer(ptr->buffer), use_tuple_awaitable);
+            const auto [ec, len] = co_await ptr->websocket.async_read(ptr->buffer, use_tuple_awaitable);
 
             io_watchdog.stop();
 
@@ -71,7 +78,10 @@ namespace spider2
             }
             else
             {
-               ptr->handler.on_message(ptr->data, ptr, std::string_view{ptr->buffer.data(), len});
+
+               ptr->handler.on_message(ptr->data, ptr,
+                                       std::string_view{reinterpret_cast<char *>(ptr->buffer.data().data()), len});
+               ptr->buffer.consume(len);
             }
          }
       }
@@ -92,34 +102,37 @@ namespace spider2
 
             if (message_to_send.has_value())
             {
-               if (const auto *msg_ptr = std::get_if<string>(message_to_send.value()); msg_ptr)
-               {
-                  const auto watchdog = std::stop_callback{ctx.stop_source.get_token(),
-                                                           [&]() { ctx.websocket.next_layer().shutdown_send(); }};
-                  const auto [ec, len] = co_await ctx.websocket.async_write(io::buffer(*msg_ptr), use_tuple_awaitable);
+               auto &msg = message_to_send.value();
+               const std::string &msg_ref = std::visit(
+                   [](auto &v) -> const std::string &
+                   {
+                      using arg_type = std::decay_t<decltype(msg)>;
+                      if constexpr (std::is_same_v<arg_type, std::string>)
+                      {
+                         return v;
+                      }
+                      else if constexpr (std::is_same_v<arg_type, std::shared_ptr<std::string>>)
+                      {
+                         return *v;
+                      }
+                      else
+                      {
+                         static std::string empty;
+                         return empty;
+                      }
+                   },
+                   msg);
 
-                  deadline.stop();
-                  if (ec)
-                  {
-                     ctx.close();
-                  }
-               }
-               else if (const auto *msg_ptr = std::get_if<std::shared_ptr<string>>(message_to_send.value()); msg_ptr)
-               {
-                  const auto watchdog = std::stop_callback{ctx.stop_source.get_token(),
-                                                           [&]() { ctx.websocket.next_layer().shutdown_send(); }};
+               const auto watchdog = std::stop_callback{ctx.stop_source.get_token(), [&]()
+                                                        {
+                                                           boost::system::error_code ec;
+                                                           ctx.websocket.next_layer().shutdown(
+                                                               boost::asio::socket_base::shutdown_send, ec);
+                                                        }};
+               const auto [ec, len] = co_await ctx.websocket.async_write(io::buffer(msg_ref), use_tuple_awaitable);
 
-                  const auto [ec, len] =
-                      co_await ctx.websocket.async_write(io::buffer(*msg_ptr->get()), use_tuple_awaitable);
-
-                  deadline.stop();
-
-                  if (ec)
-                  {
-                     ctx.close();
-                  }
-               }
-               else
+               deadline.stop();
+               if (ec)
                {
                   ctx.close();
                }
@@ -139,55 +152,59 @@ namespace spider2
              ptr->websocket.get_executor(),
              [ptr]() -> io::awaitable<void>
              {
-                return [](std::shared_ptr<websocket_connection_context> connection_ptr)
+                return [](std::shared_ptr<websocket_connection_context> connection_ptr) -> io::awaitable<void>
                 {
-                   const auto io_watchdog =
-                       std::stop_callback{connection_ptr->stop_source.get_token(), [&]()
-                                          {
-                                             auto &socket = connection_ptr->websocket.next_layer();
-
-                                             boost::system::error_code ec;
-                                             socket.shutdown(boost::asio::socket_base::shutdown_both, ec);
-                                             socket.close(ec);
-                                          }};
-
-                   auto watchdog_timer =
-                       cancellation_timer(connection_ptr->websocket.get_executor(), connection_ptr->stop_source,
-                                          connection_ptr->settings.recv_timeout.has_value()
-                                              ? connection_ptr->settings.accept_timeout.value()
-                                              : std::chrono::minutes{1});
-
-                   auto deadline_timer = watchdog_timer.start_watchdog();
-                   const auto [ec] = co_await connection_ptr->websocket.async_accept(use_tuple_awaitable);
-                   if (ec)
+                   const auto close_it = [connection_ptr]()
                    {
-                      connection_ptr->handler.on_accept_failed(connection_ptr->data);
-                      co_return;
-                   }
-
-                   deadline_timer.stop();
-
-                   connection_ptr->handler.on_accept(connection_ptr->data, connection_ptr);
-
-                   auto read_task = connection_ptr->start_read(connection_ptr);
-                   auto write_task = connection_ptr->start_send(*connection_ptr);
-
-                   co_await (read_task || write_task);
-
-                   if (connection_ptr->close_reason == websocket_close_reason::close_normal)
-                   {
-                      const auto [close_ec] = co_await connection_ptr->websocket.async_close(
-                          websocket::close_code::normal, use_tuple_awaitable);
-
                       auto &socket = connection_ptr->websocket.next_layer();
 
                       boost::system::error_code shutdown_ec = {};
                       socket.shutdown(boost::asio::socket_base::shutdown_both, shutdown_ec);
                       socket.close(shutdown_ec);
-                      ignore_unused(close_ec);
+                   };
+
+                   try
+                   {
+                      const auto io_watchdog =
+                          std::stop_callback{connection_ptr->stop_source.get_token(), [close_it]() { close_it(); }};
+
+                      auto watchdog_timer =
+                          cancellation_timer(connection_ptr->websocket.get_executor(), connection_ptr->stop_source,
+                                             connection_ptr->settings.recv_timeout.has_value()
+                                                 ? connection_ptr->settings.accept_timeout.value()
+                                                 : std::chrono::minutes{1});
+
+                      auto deadline_timer = watchdog_timer.start_watchdog();
+                      const auto [ec] = co_await connection_ptr->websocket.async_accept(use_tuple_awaitable);
+                      if (ec)
+                      {
+                         connection_ptr->handler.on_accept_failed(connection_ptr->data);
+                         co_return;
+                      }
+
+                      deadline_timer.stop();
+
+                      connection_ptr->handler.on_accept(connection_ptr->data, connection_ptr);
+
+                      co_await (connection_ptr->start_read(connection_ptr) ||
+                                connection_ptr->start_send(*connection_ptr));
+
+                      if (connection_ptr->close_reason == websocket_close_reason::close_normal)
+                      {
+                         const auto [close_ec] = co_await connection_ptr->websocket.async_close(
+                             websocket::close_code::normal, use_tuple_awaitable);
+                         ignore_unused(close_ec);
+                      }
+                   }
+                   catch (...)
+                   {
+                      connection_ptr->close_reason = websocket_close_reason::exception;
+                      connection_ptr->handler.on_exception(connection_ptr->data, connection_ptr,
+                                                           std::current_exception());
                    }
 
-                   ptr->handler.on_close(ptr->data, ptr, ptr->close_reason);
+                   close_it();
+                   connection_ptr->handler.on_close(connection_ptr->data, connection_ptr, connection_ptr->close_reason);
                 }(std::move(ptr));
              },
              io::detached);

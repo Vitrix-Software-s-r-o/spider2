@@ -88,6 +88,12 @@ if (NOT TARGET ${target})
     target_link_libraries(${target}-example spider2 ${EXE_LIBS})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
 
+    add_custom_command(TARGET ${target}-example POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E copy_directory test-site $<TARGET_PROPERTY:${target},BINARY_DIR>/test-site
+            COMMENT "Copying test-site to target directory of ${target}"
+    )
+
     if (SPIDER2_TESTS)
         add_executable(${target}-tests
                 tests/utils_tests.cpp

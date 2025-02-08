@@ -10,7 +10,8 @@ namespace spider2
    {
       close_normal,
       recv_timeout,
-      send_timeout
+      send_timeout,
+      exception
    };
 
    class websocket_event_handler
@@ -28,5 +29,8 @@ namespace spider2
 
       inline virtual void on_message(const websocket_connection_data &data, websocket_connection_ptr const &connection,
                                      std::string_view message) {};
+
+      inline virtual void on_exception(const websocket_connection_data &data,
+                                       websocket_connection_ptr const &connection, std::exception_ptr ptr) {};
    };
 } // namespace spider2

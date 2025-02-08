@@ -30,8 +30,11 @@ namespace spider2
    class message_queue
    {
     public:
+      inline explicit message_queue(io::any_io_executor executor) : timer_(std::move(executor)) {}
+
       /// @brief Queue a message.
-      void queue(outgoing_message_concept auto &&msg)
+
+      inline void queue(outgoing_message_concept auto &&msg)
       {
          std::lock_guard<std::mutex> lock(lock_);
          queue_.push(std::forward<std::remove_reference_t<decltype(msg)>>(msg));
@@ -39,7 +42,7 @@ namespace spider2
 
       /// @brief Dequeue a message.
       /// @return The message or std::nullopt if the queue is empty.
-      auto dequeue() -> std::optional<outgoing_message>
+      inline auto dequeue() -> std::optional<outgoing_message>
       {
          std::lock_guard<std::mutex> lock(lock_);
          if (queue_.empty())
@@ -54,7 +57,7 @@ namespace spider2
       }
 
       [[nodiscard]]
-      auto async_dequeue(std::stop_token const &token) -> io::awaitable<std::optional<outgoing_message>>
+      inline auto async_dequeue(std::stop_token const &token) -> io::awaitable<std::optional<outgoing_message>>
       {
          timer_.expires_after(60s);
          const auto watchdog = std::stop_callback{token, [&]() { timer_.cancel(); }};
