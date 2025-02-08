@@ -8,6 +8,17 @@
 
 namespace spider2
 {
+   struct websocket_settings
+   {
+      /// this will require to receive message on the sockets at least that often, default value is never
+      std::optional<std::chrono::steady_clock::duration> recv_timeout = std::nullopt;
+      /// this will require to send message within this timeout period, default value is never
+      std::optional<std::chrono::steady_clock::duration> send_timeout = std::nullopt;
+
+      /// this will require accept to finish within timeout (the default value is 1 minute)
+      std::optional<std::chrono::steady_clock::duration> accept_timeout = std::nullopt;
+   };
+
    struct websocket_connection_data
    {
       std::uint64_t id;

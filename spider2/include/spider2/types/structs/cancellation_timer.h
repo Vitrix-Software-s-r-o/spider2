@@ -10,23 +10,55 @@ namespace spider2
    class cancellation_timer
    {
     public:
-      cancellation_timer(stop_source &cts, std::chrono::steady_clock::duration deadline) : cts(cts) {}
+      inline cancellation_timer(io::any_io_executor executor, stop_source &cts,
+                                std::chrono::steady_clock::duration deadline)
+          : cts(cts), deadline_(deadline), timer_(std::move(executor))
+      {
+      }
 
-      auto make_deadline_watchdog()
+      inline auto start_watchdog(std::function<void()> callback = {})
       {
          timer_.expires_after(deadline_);
+         timer_.async_wait(
+             [this, callback](const error_code &ec)
+             {
+                if (!ec)
+                {
+                   if (callback != nullptr)
+                   {
+                      callback();
+                   }
+                   // timer finished and has not been cancelled -> we trigger cancellation
+                   cts.request_stop();
+                }
+             });
          struct deadline_watchdog
          {
+            deadline_watchdog(io::steady_timer &timer) : timer_(timer) {}
             ~deadline_watchdog()
             {
-               timer_.cancel();
+               stop();
             }
+
+            void stop()
+            {
+               if (!stopped_)
+               {
+                  timer_.cancel();
+               }
+            }
+
+          private:
+            io::steady_timer &timer_;
+            bool stopped_ = false;
          };
+
+         return deadline_watchdog{timer_};
       }
 
     private:
       stop_source &cts;
-      io::steady_timer timer_;
       std::chrono::steady_clock::duration deadline_;
+      io::steady_timer timer_;
    };
 } // namespace spider2
