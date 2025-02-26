@@ -24,16 +24,22 @@ namespace spider2
             auto result = optional<response>{};
             auto exec = [&](auto &handler) -> io::awaitable<bool>
             {
-               return [](auto &handler, auto &req, auto &ep, auto &result, auto &...args) -> io::awaitable<bool>
+               return [](auto &_handler, auto &_req, auto &_ep, auto &_result, auto &..._args) -> io::awaitable<bool>
                {
-                  if (handler.matches(ep))
+                  if (!_result.has_value() && _handler.matches(_ep))
                   {
-                     result = co_await handler.invoke(req, std::forward<Arg>(args)...);
+                     //    std::cout << "handler matches : " << _ep.path << std::endl;
+                     _result = co_await _handler.invoke(_req, std::forward<Arg>(_args)...);
+
+                     if (_result.has_value() && _result->is_handled_with_no_response())
+                     {
+                        //       std::cout << "handler matches : no response" << _ep.path << std::endl;
+                        co_return false;
+                     }
 
                      // it causes next executor to not run
                      co_return false;
                   }
-
                   // continue searching
                   co_return true;
                }(handler, req, ep, result, args...);
@@ -65,22 +71,32 @@ namespace spider2
             auto result = optional<response>{};
             auto exec = [&](auto &handler) -> io::awaitable<bool>
             {
-               if (handler.matches(ep))
+               return [](auto &_req, auto &_result, auto &_ep, auto &_handler, Arg &&..._args) -> io::awaitable<bool>
                {
-                  result = co_await handler.invoke(req, std::forward<Arg>(args)...);
-                  if (result.has_value() && result->is_handled_with_no_response())
+                  if (!_result.has_value() && _handler.matches(_ep))
                   {
-                     co_return false;
+                     // std::cout << "2. handler matches : " << _ep.path << std::endl;
+                     _result = co_await _handler.invoke(_req, std::forward<Arg>(_args)...);
+                     if (_result.has_value() && _result->is_handled_with_no_response())
+                     {
+                        // std::cout << "2. handler matches : no response" << _ep.path << std::endl;
+                        co_return false;
+                     }
+
+                     if (_result.has_value())
+                     {
+                        auto result = _result->get_status() == status::not_found;
+                        if (result)
+                        {
+                           _result.reset();
+                        }
+                        co_return result;
+                     }
                   }
 
-                  if (result.has_value())
-                  {
-                     co_return result->get_status() == status::not_found;
-                  }
-               }
-
-               // continue searching
-               co_return true;
+                  // continue searching
+                  co_return true;
+               }(req, result, ep, handler, args...);
             };
 
             bool handled = co_await std::apply(
