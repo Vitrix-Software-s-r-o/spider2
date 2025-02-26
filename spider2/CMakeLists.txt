@@ -84,7 +84,7 @@ if (NOT TARGET ${target})
     target_include_directories(${target} PRIVATE ${CPP_BASE64_INCLUDE_DIRS})
     target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-    add_executable(${target}-example main.cpp)
+    add_executable(${target}-example main.cpp test-site/index.html)
     target_link_libraries(${target}-example spider2 ${EXE_LIBS})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
 

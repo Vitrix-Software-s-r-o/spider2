@@ -11,8 +11,11 @@ namespace spider2
 
    struct websocket_connection_context : public websocket_connection
    {
-
-      static std::atomic<std::uint64_t> id_counter;
+      inline static std::uint64_t get_next_id()
+      {
+         static std::atomic<std::uint64_t> id_counter = {};
+         return id_counter++;
+      }
       flat_buffer buffer;
 
       websocket_event_handler &handler;
@@ -28,7 +31,7 @@ namespace spider2
       inline websocket_connection_context(websocket_event_handler &handler, endpoint_base ep, http::fields fields,
                                           websocket::stream<tcp::socket> ws, websocket_settings settings)
           : handler(handler),
-            data{.id = id_counter++, .url_endpoint = static_cast<std::string>(ep.path), .fields = std::move(fields)},
+            data{.id = get_next_id(), .url_endpoint = static_cast<std::string>(ep.path), .fields = std::move(fields)},
             websocket{std::move(ws)}, outgoing_messages(websocket.get_executor()), settings(settings)
       {
          websocket.set_option(websocket::stream_base::timeout::suggested(role_type::server));
@@ -211,7 +214,7 @@ namespace spider2
       }
    };
 
-   inline auto websocket(websocket_event_handler &handler, websocket_settings settings = {})
+   inline auto websocket_handler(websocket_event_handler &handler, websocket_settings settings = {})
    {
       return [&, settings](request &req) -> await_response
       {

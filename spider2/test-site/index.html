@@ -3,7 +3,26 @@
 <head>
     <meta charset="utf-8">
 </head>
+<script type="text/javascript">
+    const port = window.location.port;
+    const websocket = document.getElementById("websocket");
+
+    const ws = new WebSocket("ws://" + window.location.hostname + (port ? ":" + port : "") + "/ws");
+    ws.onopen = function () {
+        websocket.innerText += "Connected to server\n";
+
+        ws.send("Hello, server!");
+    };
+    ws.onclose = function () {
+        websocket.innerText += "Disconnected from server\n";
+    };
+    ws.onmessage = function (event) {
+        websocket.innerText += "Received: " + event.data + "\n";
+    };
+
+</script>
 <body>
 <h1>Spider Test Site</h1>
+<pre id="websocket"></pre>
 </body>
 </html>

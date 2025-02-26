@@ -267,7 +267,9 @@ namespace spider2
          using result_type = decltype(visitor(test_obj));
          if constexpr (std::is_void_v<result_type>)
          {
-            std::visit(overload{[](with_no_response const &) -> result_type {}, std::forward<Fun>(visitor)}, message);
+            std::visit(overload{[](with_no_response const &) -> result_type { return result_type{}; },
+                                std::forward<Fun>(visitor)},
+                       message);
          }
          else
          {
@@ -292,6 +294,11 @@ namespace spider2
              overload{[](http::response<response_body> const &msg) -> http::response<response_body> const *
                       { return &msg; }, [](auto const &) -> http::response<response_body> const * { return nullptr; }},
              message);
+      }
+
+      inline auto is_handled_with_no_response() const noexcept -> bool
+      {
+         return std::holds_alternative<with_no_response>(message);
       }
 
       [[nodiscard]] auto get_status() const -> http::status

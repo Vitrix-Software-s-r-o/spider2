@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "endpoint_handler.h"
 #include "../concepts/middleware.h"
+#include "endpoint_handler.h"
 #include "nested_router.h"
 #include "scoped_router.h"
 
@@ -17,20 +17,20 @@ namespace spider2
       struct break_on_not_found
       {
          template <class Req, class Handlers, class... Arg>
-         await_response operator()(Handlers &handlers, Req &req, Arg &&... args) const
+         await_response operator()(Handlers &handlers, Req &req, Arg &&...args) const
          {
             const endpoint_base ep = req.get_processing_endpoint();
 
             auto result = optional<response>{};
-            auto exec_fun = [&](auto &handler) -> io::awaitable<bool>
+            auto exec = [&](auto &handler) -> io::awaitable<bool>
             {
-               return [](auto &handler, auto &req, auto &ep, auto &result, auto &... args) -> io::awaitable<bool>
+               return [](auto &handler, auto &req, auto &ep, auto &result, auto &...args) -> io::awaitable<bool>
                {
                   if (handler.matches(ep))
                   {
                      result = co_await handler.invoke(req, std::forward<Arg>(args)...);
 
-                     //it causes next executor to not run
+                     // it causes next executor to not run
                      co_return false;
                   }
 
@@ -39,15 +39,15 @@ namespace spider2
                }(handler, req, ep, result, args...);
             };
 
-            const auto exec_result = co_await std::apply([&](auto &... handler) -> io::awaitable<bool>
-            {
-               return [](auto &fun, auto &... handler) -> io::awaitable<bool>
-               {
-                  co_return (... && co_await fun(handler));
-               }(exec_fun, handler...);
-            }, handlers);
+            bool handled = co_await std::apply(
+                [&](auto &...handler) -> io::awaitable<bool>
+                {
+                   return [](auto &exec_fun, auto &...handler_fun) -> io::awaitable<bool>
+                   { co_return (... && co_await exec_fun(handler_fun)); }(exec, handler...);
+                },
+                handlers);
 
-            static_cast<void>(exec_result);
+            static_cast<void>(handled);
 
             if (result.has_value())
                co_return std::move(result.value());
@@ -59,7 +59,7 @@ namespace spider2
       struct continue_searching_on_not_found
       {
          template <class Req, class Handlers, class... Arg>
-         await_response operator()(Req &req, Handlers &handlers, Arg &&... args) const
+         await_response operator()(Req &req, Handlers &handlers, Arg &&...args) const
          {
             const endpoint_base ep = req.get_processing_endpoint();
             auto result = optional<response>{};
@@ -68,17 +68,30 @@ namespace spider2
                if (handler.matches(ep))
                {
                   result = co_await handler.invoke(req, std::forward<Arg>(args)...);
-                  co_return result->get_status() == status::not_found;
+                  if (result.has_value() && result->is_handled_with_no_response())
+                  {
+                     co_return false;
+                  }
+
+                  if (result.has_value())
+                  {
+                     co_return result->get_status() == status::not_found;
+                  }
                }
 
                // continue searching
                co_return true;
             };
 
-            bool handled = co_await std::apply([&](auto &... handler) -> io::awaitable<bool>
-            {
-               co_return (... && co_await exec(handler));
-            }, handlers);
+            bool handled = co_await std::apply(
+                [&](auto &...handler) -> io::awaitable<bool>
+                {
+                   return [](auto &exec_fun, auto &...handler_fun) -> io::awaitable<bool>
+                   { co_return (... && co_await exec_fun(handler_fun)); }(exec, handler...);
+                },
+                handlers);
+
+            static_cast<void>(handled);
 
             if (result.has_value())
                co_return std::move(result.value());
@@ -86,9 +99,7 @@ namespace spider2
                co_return response::return_string(http::status::not_found, "not found");
          }
       };
-
    };
-
 
    template <class Policy, class... F>
    struct router
@@ -107,25 +118,22 @@ namespace spider2
       {
          using nested_next_type = nested_router<Next>;
          return router<Policy, F..., nested_next_type>{
-            std::tuple_cat(handlers, std::tuple{nested_next_type{std::forward<Next>(next), path}})};
+             std::tuple_cat(handlers, std::tuple{nested_next_type{std::forward<Next>(next), path}})};
       }
 
       auto matches(endpoint_base const &ep) const noexcept -> bool
       {
-         return std::apply([&](auto &... handler) -> bool
-         {
-            return (... || handler.matches(ep));
-         }, this->handlers);
+         return std::apply([&](auto &...handler) -> bool { return (... || handler.matches(ep)); }, this->handlers);
       }
 
       template <class... Arg>
-      auto invoke(request &req, Arg &&... args) const -> await_response
+      auto invoke(request &req, Arg &&...args) const -> await_response
       {
          return this->execution_policy(this->handlers, req, std::forward<Arg>(args)...);
       }
 
       template <class... Arg>
-      auto operator()(request &req, Arg &&... args) const -> await_response
+      auto operator()(request &req, Arg &&...args) const -> await_response
       {
          return this->invoke(req, std::forward<Arg>(args)...);
       }
@@ -151,4 +159,4 @@ namespace spider2
    {
       return router<Policy>{};
    }
-}
+} // namespace spider2
