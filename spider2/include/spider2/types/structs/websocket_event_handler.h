@@ -19,7 +19,8 @@ namespace spider2
     public:
       virtual ~websocket_event_handler() = default;
 
-      inline virtual void on_accept_failed(const websocket_connection_data &data) {};
+      inline virtual void on_accept_failed(const websocket_connection_data &data, boost::system::error_code const &ec) {
+      };
 
       inline virtual void on_accept(const websocket_connection_data &data, websocket_connection_ptr const &connection) {
       };

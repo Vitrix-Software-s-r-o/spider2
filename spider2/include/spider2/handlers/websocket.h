@@ -181,7 +181,7 @@ namespace spider2
                       const auto [ec] = co_await connection_ptr->websocket.async_accept(use_tuple_awaitable);
                       if (ec)
                       {
-                         connection_ptr->handler.on_accept_failed(connection_ptr->data);
+                         connection_ptr->handler.on_accept_failed(connection_ptr->data, ec);
                          co_return;
                       }
 

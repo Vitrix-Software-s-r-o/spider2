@@ -6,9 +6,9 @@ using namespace spider2;
 
 class ws_event_handler : public websocket_event_handler
 {
-   inline virtual void on_accept_failed(const websocket_connection_data &data)
+   inline virtual void on_accept_failed(const websocket_connection_data &data, boost::system::error_code const &ec)
    {
-      std::cout << "accept failed" << std::endl;
+      std::cout << "accept failed: " << ec.message() << std::endl;
    }
 
    inline virtual void on_accept(const websocket_connection_data &data, websocket_connection_ptr const &connection)
