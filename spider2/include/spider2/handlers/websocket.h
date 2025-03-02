@@ -30,8 +30,8 @@ namespace spider2
 
       websocket_close_reason close_reason = websocket_close_reason::close_normal;
 
-      inline websocket_connection_context(websocket_event_handler &handler, http::request<http::empty_body> req,
-                                          websocket::stream<tcp::socket> ws, websocket_settings settings)
+      inline websocket_connection_context(websocket_event_handler &handler, http::request<http::empty_body> const &req,
+                                          websocket::stream<tcp::socket> ws, const websocket_settings &settings)
           : handler(handler), request(req), data{.id = get_next_id(),
                                                  .url_endpoint = static_cast<std::string>(req.target()),
                                                  .fields = static_cast<const http::fields &>(req)},
@@ -58,94 +58,132 @@ namespace spider2
 
       static auto start_read(std::shared_ptr<websocket_connection_context> ptr) -> io::awaitable<void>
       {
-         auto watchdog_timer = cancellation_timer(
-             ptr->websocket.get_executor(), ptr->stop_source,
-             ptr->settings.recv_timeout.has_value() ? ptr->settings.recv_timeout.value()
-                                                    : std::numeric_limits<std::chrono::steady_clock::duration>::max());
 
-         const auto watchdog =
-             std::stop_callback{ptr->stop_source.get_token(), [ptr]()
-                                {
-                                   boost::system::error_code ec;
-                                   ptr->websocket.next_layer().shutdown(boost::asio::socket_base::shutdown_receive, ec);
-                                }};
-
-         while (!ptr->stop_source.stop_requested())
+         if (ptr->settings.recv_timeout.has_value() && ptr->settings.recv_timeout.value() > std::chrono::seconds{0})
          {
+            // start the time bounded read
+            auto watchdog_timer =
+                cancellation_timer(ptr->websocket.get_executor(), ptr->stop_source, ptr->settings.recv_timeout.value());
             auto io_watchdog =
                 watchdog_timer.start_watchdog([ptr]() { ptr->close_reason = websocket_close_reason::recv_timeout; });
-            const auto [ec, len] = co_await ptr->websocket.async_read(ptr->buffer, use_tuple_awaitable);
 
-            io_watchdog.stop();
-
-            if (ec)
+            while (!ptr->stop_source.stop_requested())
             {
-               ptr->close();
+               const auto [ec, len] = co_await ptr->websocket.async_read(ptr->buffer, use_tuple_awaitable);
+               io_watchdog.stop();
+
+               if (ec)
+               {
+                  ptr->close();
+               }
+               else
+               {
+
+                  ptr->handler.on_message(ptr->data, ptr,
+                                          std::string_view{reinterpret_cast<char *>(ptr->buffer.data().data()), len});
+                  ptr->buffer.consume(len);
+               }
             }
-            else
-            {
+         }
+         else
+         {
+            // start unbounded read
 
-               ptr->handler.on_message(ptr->data, ptr,
-                                       std::string_view{reinterpret_cast<char *>(ptr->buffer.data().data()), len});
-               ptr->buffer.consume(len);
+            while (!ptr->stop_source.stop_requested())
+            {
+               const auto [ec, len] = co_await ptr->websocket.async_read(ptr->buffer, use_tuple_awaitable);
+
+               if (ec)
+               {
+                  ptr->close();
+               }
+               else
+               {
+
+                  ptr->handler.on_message(ptr->data, ptr,
+                                          std::string_view{reinterpret_cast<char *>(ptr->buffer.data().data()), len});
+                  ptr->buffer.consume(len);
+               }
             }
          }
       }
 
+      static auto get_message_buffer(const std::variant<std::string, std::shared_ptr<std::string>> &msg)
+          -> const std::string &
+      {
+         const std::string &msg_ref = std::visit(
+             [](auto &v) -> const std::string &
+             {
+                using arg_type = std::decay_t<decltype(msg)>;
+                if constexpr (std::is_same_v<arg_type, std::string>)
+                {
+                   return v;
+                }
+                else if constexpr (std::is_same_v<arg_type, std::shared_ptr<std::string>>)
+                {
+                   return *v;
+                }
+                else
+                {
+                   static std::string empty;
+                   return empty;
+                }
+             },
+             msg);
+         return msg_ref;
+      }
       static auto start_send(websocket_connection_context &ctx) -> io::awaitable<void>
       {
-         auto watchdog_timer = cancellation_timer(
-             ctx.websocket.get_executor(), ctx.stop_source,
-             ctx.settings.recv_timeout.has_value() ? ctx.settings.recv_timeout.value()
-                                                   : std::numeric_limits<std::chrono::steady_clock::duration>::max());
-
-         while (!ctx.stop_source.stop_requested())
+         if (ctx.settings.send_timeout.has_value())
          {
-            const auto message_to_send = co_await ctx.outgoing_messages.async_dequeue(ctx.stop_source.get_token());
+            // start the time bounded send
+            auto watchdog_timer =
+                cancellation_timer(ctx.websocket.get_executor(), ctx.stop_source, ctx.settings.send_timeout.value());
 
-            auto deadline =
-                watchdog_timer.start_watchdog([&ctx]() { ctx.close_reason = websocket_close_reason::send_timeout; });
-
-            if (message_to_send.has_value())
+            while (!ctx.stop_source.stop_requested())
             {
-               auto &msg = message_to_send.value();
-               const std::string &msg_ref = std::visit(
-                   [](auto &v) -> const std::string &
-                   {
-                      using arg_type = std::decay_t<decltype(msg)>;
-                      if constexpr (std::is_same_v<arg_type, std::string>)
-                      {
-                         return v;
-                      }
-                      else if constexpr (std::is_same_v<arg_type, std::shared_ptr<std::string>>)
-                      {
-                         return *v;
-                      }
-                      else
-                      {
-                         static std::string empty;
-                         return empty;
-                      }
-                   },
-                   msg);
+               const auto message_to_send = co_await ctx.outgoing_messages.async_dequeue(ctx.stop_source.get_token());
 
-               const auto watchdog = std::stop_callback{ctx.stop_source.get_token(), [&]()
-                                                        {
-                                                           boost::system::error_code ec;
-                                                           ctx.websocket.next_layer().shutdown(
-                                                               boost::asio::socket_base::shutdown_send, ec);
-                                                        }};
-               const auto [ec, len] = co_await ctx.websocket.async_write(io::buffer(msg_ref), use_tuple_awaitable);
+               auto deadline =
+                   watchdog_timer.start_watchdog([&ctx]() { ctx.close_reason = websocket_close_reason::send_timeout; });
 
-               deadline.stop();
-               if (ec)
+               if (message_to_send.has_value())
+               {
+                  const auto &msg_ref = get_message_buffer(message_to_send.value());
+
+                  const auto [ec, len] = co_await ctx.websocket.async_write(io::buffer(msg_ref), use_tuple_awaitable);
+                  deadline.stop();
+                  if (ec)
+                  {
+                     ctx.close();
+                  }
+               }
+               else
                {
                   ctx.close();
                }
             }
-            else
+         }
+         else
+         {
+            // start unbounded send
+            while (!ctx.stop_source.stop_requested())
             {
-               ctx.close();
+               const auto message_to_send = co_await ctx.outgoing_messages.async_dequeue(ctx.stop_source.get_token());
+               if (message_to_send.has_value())
+               {
+                  const auto &msg_ref = get_message_buffer(message_to_send.value());
+                  const auto [ec, len] = co_await ctx.websocket.async_write(io::buffer(msg_ref), use_tuple_awaitable);
+
+                  if (ec)
+                  {
+                     ctx.close();
+                  }
+               }
+               else
+               {
+                  ctx.close();
+               }
             }
          }
       }
@@ -175,10 +213,17 @@ namespace spider2
                              {
                                 auto &socket = connection_ptr->websocket.next_layer();
 
-                                boost::system::error_code shutdown_ec = {};
-                                socket.shutdown(boost::asio::socket_base::shutdown_both, shutdown_ec);
-                                socket.close(shutdown_ec);
+                                if (socket.is_open())
+                                {
+                                   boost::system::error_code shutdown_ec = {};
+                                   socket.shutdown(boost::asio::socket_base::shutdown_both, shutdown_ec);
+                                   socket.close(shutdown_ec);
+                                }
                              };
+
+                             const auto watchdog =
+                                 std::stop_callback{connection_ptr->stop_source.get_token(), [&]() { close_it(); }};
+
                              try
                              {
                                 co_await (start_read(connection_ptr) || start_send(*connection_ptr));
