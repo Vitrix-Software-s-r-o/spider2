@@ -12,7 +12,7 @@
     const port = window.location.port;
     const websocket = document.getElementById("websocket");
 
-    const ws = new WebSocket("ws://" + window.location.hostname + (port ? ":" + port : "") + "/ws");
+    const ws = new WebSocket("ws://" + window.location.hostname + (port ? ":" + port : "") + "/ws", "spider-protocol");
     ws.onopen = function () {
         websocket.innerText += "Connected to server\n";
 

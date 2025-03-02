@@ -19,6 +19,8 @@ namespace spider2
       flat_buffer buffer;
 
       websocket_event_handler &handler;
+      http::request<http::empty_body> request;
+
       websocket_connection_data data;
       websocket::stream<tcp::socket> websocket;
 
@@ -28,10 +30,11 @@ namespace spider2
 
       websocket_close_reason close_reason = websocket_close_reason::close_normal;
 
-      inline websocket_connection_context(websocket_event_handler &handler, endpoint_base ep, http::fields fields,
+      inline websocket_connection_context(websocket_event_handler &handler, http::request<http::empty_body> req,
                                           websocket::stream<tcp::socket> ws, websocket_settings settings)
-          : handler(handler),
-            data{.id = get_next_id(), .url_endpoint = static_cast<std::string>(ep.path), .fields = std::move(fields)},
+          : handler(handler), request(req), data{.id = get_next_id(),
+                                                 .url_endpoint = static_cast<std::string>(req.target()),
+                                                 .fields = static_cast<const http::fields &>(req)},
             websocket{std::move(ws)}, outgoing_messages(websocket.get_executor()), settings(settings)
       {
          websocket.set_option(websocket::stream_base::timeout::suggested(role_type::server));
@@ -150,67 +153,56 @@ namespace spider2
       static auto accept(std::shared_ptr<websocket_connection_context> ptr) -> void
       {
          using namespace boost::asio::experimental::awaitable_operators;
-
-         io::co_spawn(
-             ptr->websocket.get_executor(),
-             [ptr]() -> io::awaitable<void>
+         ptr->websocket.set_option(websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
+         ptr->websocket.async_accept(
+             ptr->request,
+             [ptr](const boost::system::error_code &ec)
              {
-                return [](std::shared_ptr<websocket_connection_context> connection_ptr) -> io::awaitable<void>
+                if (ec)
                 {
-                   const auto close_it = [connection_ptr]()
-                   {
-                      auto &socket = connection_ptr->websocket.next_layer();
+                   ptr->handler.on_accept_failed(ptr->data, ec);
+                }
+                else
+                {
+                   ptr->handler.on_accept(ptr->data, ptr);
+                   io::co_spawn(
+                       ptr->websocket.get_executor(),
+                       [ptr]() -> io::awaitable<void>
+                       {
+                          return [](auto connection_ptr) -> io::awaitable<void>
+                          {
+                             const auto close_it = [connection_ptr]()
+                             {
+                                auto &socket = connection_ptr->websocket.next_layer();
 
-                      boost::system::error_code shutdown_ec = {};
-                      socket.shutdown(boost::asio::socket_base::shutdown_both, shutdown_ec);
-                      socket.close(shutdown_ec);
-                   };
+                                boost::system::error_code shutdown_ec = {};
+                                socket.shutdown(boost::asio::socket_base::shutdown_both, shutdown_ec);
+                                socket.close(shutdown_ec);
+                             };
+                             try
+                             {
+                                co_await (start_read(connection_ptr) || start_send(*connection_ptr));
+                                if (connection_ptr->close_reason == websocket_close_reason::close_normal)
+                                {
+                                   const auto [close_ec] = co_await connection_ptr->websocket.async_close(
+                                       websocket::close_code::normal, use_tuple_awaitable);
+                                   ignore_unused(close_ec);
+                                }
+                             }
+                             catch (...)
+                             {
+                                connection_ptr->close_reason = websocket_close_reason::exception;
+                                connection_ptr->handler.on_exception(connection_ptr->data, connection_ptr,
+                                                                     std::current_exception());
+                             }
 
-                   try
-                   {
-                      const auto io_watchdog =
-                          std::stop_callback{connection_ptr->stop_source.get_token(), [close_it]() { close_it(); }};
-
-                      auto watchdog_timer =
-                          cancellation_timer(connection_ptr->websocket.get_executor(), connection_ptr->stop_source,
-                                             connection_ptr->settings.recv_timeout.has_value()
-                                                 ? connection_ptr->settings.accept_timeout.value()
-                                                 : std::chrono::minutes{1});
-
-                      auto deadline_timer = watchdog_timer.start_watchdog();
-                      const auto [ec] = co_await connection_ptr->websocket.async_accept(use_tuple_awaitable);
-                      if (ec)
-                      {
-                         connection_ptr->handler.on_accept_failed(connection_ptr->data, ec);
-                         co_return;
-                      }
-
-                      deadline_timer.stop();
-
-                      connection_ptr->handler.on_accept(connection_ptr->data, connection_ptr);
-
-                      co_await (connection_ptr->start_read(connection_ptr) ||
-                                connection_ptr->start_send(*connection_ptr));
-
-                      if (connection_ptr->close_reason == websocket_close_reason::close_normal)
-                      {
-                         const auto [close_ec] = co_await connection_ptr->websocket.async_close(
-                             websocket::close_code::normal, use_tuple_awaitable);
-                         ignore_unused(close_ec);
-                      }
-                   }
-                   catch (...)
-                   {
-                      connection_ptr->close_reason = websocket_close_reason::exception;
-                      connection_ptr->handler.on_exception(connection_ptr->data, connection_ptr,
-                                                           std::current_exception());
-                   }
-
-                   close_it();
-                   connection_ptr->handler.on_close(connection_ptr->data, connection_ptr, connection_ptr->close_reason);
-                }(std::move(ptr));
-             },
-             io::detached);
+                             connection_ptr->handler.on_close(connection_ptr->data, connection_ptr,
+                                                              connection_ptr->close_reason);
+                          }(std::move(ptr));
+                       },
+                       io::detached);
+                }
+             });
       }
    };
 
@@ -218,10 +210,22 @@ namespace spider2
    {
       return [&, settings](request &req) -> await_response
       {
+         const auto *message = req.try_get_message<http::empty_body>();
+         if (!message)
+         {
+            return []() -> await_response
+            { co_return response::return_string(http::status::bad_request, "bad request"); }();
+         }
+
+         if (!websocket::is_upgrade(*message))
+         {
+            return []() -> await_response
+            { co_return response::return_string(http::status::upgrade_required, "upgrade required"); }();
+         }
+
          using connection_ptr_t = std::shared_ptr<websocket_connection_context>;
          auto ctx_ptr = std::make_shared<websocket_connection_context>(
-             handler, req.get_endpoint(), req.get_headers(), websocket::stream<tcp::socket>(req.steal_socket()),
-             settings);
+             handler, *message, websocket::stream<tcp::socket>(req.steal_socket()), settings);
 
          return [](connection_ptr_t connection_ptr) -> await_response
          {
