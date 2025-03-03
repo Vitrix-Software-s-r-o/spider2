@@ -1,5 +1,6 @@
 #include "spider2/spider2.h"
 #include <boost/dll/runtime_symbol_info.hpp>
+#include <fmt/chrono.h>
 #include <iostream>
 
 using namespace spider2;
@@ -87,16 +88,17 @@ int main()
 
    auto ws_events = ws_event_handler{};
 
-   auto timer_thread = std::jthread{[&ws_events, token = stop_src.get_token()]()
-                                    {
-                                       int i = 0;
-                                       while (!token.stop_requested())
-                                       {
-                                          i++;
-                                          ws_events.broadcast_message(fmt::to_string(i));
-                                          std::this_thread::sleep_for(std::chrono::milliseconds{16});
-                                       }
-                                    }};
+   auto timer_thread =
+       std::jthread{[&ws_events, token = stop_src.get_token()]()
+                    {
+                       while (!token.stop_requested())
+                       {
+                          auto now = std::chrono::system_clock::now();
+                          ws_events.broadcast_message(
+                              fmt::format("time: {:%T}", fmt::localtime(std::chrono::system_clock::to_time_t(now))));
+                          std::this_thread::sleep_for(std::chrono::milliseconds{5});
+                       }
+                    }};
 
    auto app = app_context_base{.token = stop_src.get_token()};
    auto simple_app =
