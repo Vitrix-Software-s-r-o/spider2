@@ -36,8 +36,11 @@ namespace spider2
 
       inline void queue(outgoing_message_concept auto &&msg)
       {
-         std::lock_guard<std::mutex> lock(lock_);
-         queue_.push(std::forward<std::remove_reference_t<decltype(msg)>>(msg));
+         {
+            std::lock_guard<std::mutex> lock(lock_);
+            queue_.push(std::forward<std::remove_reference_t<decltype(msg)>>(msg));
+         }
+         timer_.cancel();
       }
 
       /// @brief Dequeue a message.
@@ -59,22 +62,30 @@ namespace spider2
       [[nodiscard]]
       inline auto async_dequeue(std::stop_token const &token) -> io::awaitable<std::optional<outgoing_message>>
       {
-         timer_.expires_after(60s);
          const auto watchdog = std::stop_callback{token, [&]() { timer_.cancel(); }};
          while (!token.stop_requested())
          {
+            if (auto result = dequeue(); result.has_value())
+            {
+               co_return result;
+            }
+
+            timer_.expires_after(60s);
+
             if (const auto [timer_ec] = co_await timer_.async_wait(use_tuple_awaitable); timer_ec)
             {
                if (token.stop_requested())
                {
                   co_return std::nullopt;
                }
-               else
+               else if (auto result = dequeue(); result.has_value())
                {
-                  co_return dequeue();
+                  co_return result;
                }
             }
          }
+
+         co_return std::nullopt;
       }
 
     private:

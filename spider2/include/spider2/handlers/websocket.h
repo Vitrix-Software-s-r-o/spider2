@@ -114,7 +114,7 @@ namespace spider2
          const std::string &msg_ref = std::visit(
              [](auto &v) -> const std::string &
              {
-                using arg_type = std::decay_t<decltype(msg)>;
+                using arg_type = std::decay_t<decltype(v)>;
                 if constexpr (std::is_same_v<arg_type, std::string>)
                 {
                    return v;
