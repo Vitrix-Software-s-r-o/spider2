@@ -108,6 +108,8 @@ int main()
    std::cout << "Starting server on http://localhost:3000" << std::endl;
    run_web_app(io_loop,
                {.tcp_listen = {tcp::endpoint{io::ip::address_v4::loopback(), 3000}},
+                .thread_pool_threads = 0,
+                .io_threads = 1,
                 .connection_keep_alive = std::chrono::seconds{30}},
                app, simple_app);
 
