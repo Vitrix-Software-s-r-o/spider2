@@ -353,6 +353,25 @@ namespace spider2
                            message);
       }
 
+      inline auto set_header(http::field header, string_view value) -> void
+      {
+         std::visit(overload{[](with_no_response &) { throw std::out_of_range{"No response to set header"}; },
+                             [&](auto &msg)
+                             { msg.set(header, boost::beast::string_view{value.data(), value.size()}); }},
+                    message);
+      }
+
+      inline auto set_header(string_view header, string_view value) -> void
+      {
+         std::visit(overload{[](with_no_response &) { throw std::out_of_range{"No response to set header"}; },
+                             [&](auto &msg)
+                             {
+                                msg.set(boost::beast::string_view{header.data(), header.size()},
+                                        boost::beast::string_view{value.data(), value.size()});
+                             }},
+                    message);
+      }
+
       template <class Body = http::empty_body>
       [[nodiscard]]
       static auto make_response_message(http::status status) -> http::response<Body>

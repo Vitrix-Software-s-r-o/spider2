@@ -1,7 +1,10 @@
 #pragma once
 
 #include "../types.h"
-#include "spider2/types/structs/cancellation_timer.h"
+#include "../types/structs/cancellation_timer.h"
+#include "../types/structs/message_queue.h"
+#include "../types/structs/websocket_connection.h"
+#include "../types/structs/websocket_event_handler.h"
 
 #include <boost/asio/experimental/awaitable_operators.hpp>
 #include <queue>

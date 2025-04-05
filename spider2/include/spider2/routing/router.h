@@ -30,18 +30,9 @@ namespace spider2
                   {
                      //    std::cout << "handler matches : " << _ep.path << std::endl;
                      _result = co_await _handler.invoke(_req, std::forward<Arg>(_args)...);
-
-                     if (_result.has_value() && _result->is_handled_with_no_response())
-                     {
-                        //       std::cout << "handler matches : no response" << _ep.path << std::endl;
-                        co_return false;
-                     }
-
-                     // it causes next executor to not run
-                     co_return false;
                   }
                   // continue searching
-                  co_return true;
+                  co_return !_result.has_value() || !_result->is_handled_with_no_response();
                }(handler, req, ep, result, args...);
             };
 
@@ -77,25 +68,15 @@ namespace spider2
                   {
                      // std::cout << "2. handler matches : " << _ep.path << std::endl;
                      _result = co_await _handler.invoke(_req, std::forward<Arg>(_args)...);
-                     if (_result.has_value() && _result->is_handled_with_no_response())
-                     {
-                        // std::cout << "2. handler matches : no response" << _ep.path << std::endl;
-                        co_return false;
-                     }
 
-                     if (_result.has_value())
+                     if (_result.has_value() && _result->get_status() == status::not_found)
                      {
-                        auto result = _result->get_status() == status::not_found;
-                        if (result)
-                        {
-                           _result.reset();
-                        }
-                        co_return result;
+                        _result.reset();
                      }
                   }
 
                   // continue searching
-                  co_return true;
+                  co_return !_result.has_value() || !_result->is_handled_with_no_response();
                }(req, result, ep, handler, args...);
             };
 

@@ -38,7 +38,6 @@ namespace spider2
    template <class R>
    struct is_awaitable_result : std::false_type
    {
-      ;
    };
 
    template <class T>

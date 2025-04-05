@@ -14,60 +14,81 @@ namespace spider2
       auto decompress(string_view buffer) -> string;
    } // namespace brotli
 
+   /// Setting the field to false will disable compression
+   constexpr std::string_view compress_field = "spider2-compress";
+
+   /// the value false for compress_field
+   constexpr std::string_view compress_field_disable_val = "false";
+
    struct compress_middleware
    {
       int quality = 5;
 
-      auto operator()(auto fun)
+      auto operator()(auto &&fun)
       {
          const int quality_temp = this->quality;
-         return [=](request &req, auto &&...ctx) -> await_response
+         return [fun = std::forward<std::remove_reference_t<decltype(fun)>>(fun),
+                 quality_temp](request &req, auto &&...ctx) -> await_response
          {
-            const int quality_local = quality_temp;
-            bool can_compress_brotli = [&]()
+            return [](auto fun, const int quality_local, request &req, auto &&...ctx) -> await_response
             {
-               auto &fields = req.get_headers();
-               if (auto it = fields.find(http::field::accept_encoding); it != fields.end())
+               bool can_compress_brotli = [&]()
                {
-                  auto value = it->value();
-                  if (value.find("br") != boost::beast::string_view::npos)
+                  auto &fields = req.get_headers();
+                  if (auto it = fields.find(http::field::accept_encoding); it != fields.end())
                   {
-                     return true;
+                     auto value = it->value();
+                     if (value.find("br") != boost::beast::string_view::npos)
+                     {
+                        return true;
+                     }
                   }
-               }
-               return false;
-            }();
+                  return false;
+               }();
 
-            auto resp = co_await fun(req, std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)...);
+               auto resp = co_await fun(req, std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)...);
 
-            if (can_compress_brotli)
-            {
-               std::visit(overload{[=](http::response<http::string_body> &msg) -> void
-                                   {
-                                      auto compressed_body = brotli::compress(msg.body(), quality_local);
-                                      if (!compressed_body.empty() && compressed_body.size() < msg.body().size())
+               if (can_compress_brotli)
+               {
+                  std::visit(overload{[=](http::response<http::string_body> &msg) -> void
                                       {
-                                         msg.body() = std::move(compressed_body);
-                                         msg.content_length(msg.body().size());
                                          auto ce = msg[http::field::content_encoding];
-                                         if (!ce.empty())
+                                         if (!ce.empty() && (ce == "br" || ce == "gzip" || ce == "deflate"))
                                          {
-                                            msg.set(http::field::content_encoding,
-                                                    fmt::format("{},br", std::string_view{ce.data(), ce.size()}));
+                                            return;
                                          }
-                                         else
+
+                                         if (msg[compress_field] == compress_field_disable_val)
                                          {
-                                            msg.set(http::field::content_encoding, "br");
+                                            msg.erase(compress_field);
+                                            return;
                                          }
-                                      }
-                                   },
-                                   [](auto &) -> void {
 
-                                   }},
-                          resp.message);
-            }
+                                         auto compressed_body = brotli::compress(msg.body(), quality_local);
+                                         if (!compressed_body.empty() && compressed_body.size() < msg.body().size())
+                                         {
+                                            msg.body() = std::move(compressed_body);
+                                            msg.content_length(msg.body().size());
 
-            co_return resp;
+                                            if (!ce.empty())
+                                            {
+                                               msg.set(http::field::content_encoding,
+                                                       fmt::format("{},br", std::string_view{ce.data(), ce.size()}));
+                                            }
+                                            else
+                                            {
+                                               msg.set(http::field::content_encoding, "br");
+                                            }
+                                         }
+                                      },
+                                      [](auto &) -> void {
+
+                                      }},
+                             resp.message);
+               }
+
+               co_return resp;
+            }(fun, quality_temp, req, std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)...);
          };
       }
    };
