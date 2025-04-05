@@ -30,6 +30,7 @@ if (NOT TARGET ${target})
     MESSAGE(STATUS "spider2-api:${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(${target} INTERFACE spider2)
 
+    if (SPIDER2_INTEGRATE_VITRIX_SERIALIZATION)
     if (TARGET commons)
         #enables support for vitrix commons serialization library
         target_link_libraries(${target} INTERFACE commons)
@@ -38,25 +39,24 @@ if (NOT TARGET ${target})
     else ()
         option(SPIDER2_API_USE_VITRIX_COMMONS "Use vitrix commons serialization library" OFF)
     endif ()
+    endif ()
 
     if (SPIDER2_TESTS)
-    add_executable(${target}-tests
-            tests/main.cpp
-            tests/result_tests.cpp
-            tests/op_result_tests.cpp
-            tests/query_args_tests.cpp
-            tests/old_spider_serialization_test.cpp
-            tests/api_args_value_passing_tests.cpp
-    )
+        add_executable(${target}-tests
+                tests/main.cpp
+                tests/result_tests.cpp
+                tests/op_result_tests.cpp
+                tests/query_args_tests.cpp
+                tests/old_spider_serialization_test.cpp
+                tests/api_args_value_passing_tests.cpp
+        )
 
         target_link_libraries(${target}-tests ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})
         target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-    endif ()
-
-    target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-    add_test(NAME ${target}-tests COMMAND ${target}-tests)
+        add_test(NAME ${target}-tests COMMAND ${target}-tests)
     endif ()
 endif ()
+
 
 if (SPIDER2_ENABLE_EXAMPLES)
     add_subdirectory(examples)

@@ -86,7 +86,7 @@ if (NOT TARGET ${target})
     add_executable(${target}-example main.cpp test-site/index.html)
     target_link_libraries(${target}-example spider2 ${EXE_LIBS})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
-    endif ()
+
 
     add_custom_command(TARGET ${target}-example POST_BUILD
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -108,7 +108,6 @@ if (NOT TARGET ${target})
         target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})
         target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
-    endif ()
         add_test(NAME ${target}-tests COMMAND ${target}-tests)
     endif ()
 endif ()
