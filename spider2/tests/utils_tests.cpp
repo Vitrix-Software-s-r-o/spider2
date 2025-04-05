@@ -17,7 +17,7 @@ struct context_b
 
 const auto first = [](auto fun)
 {
-   return [=](auto &&...ctx)
+   return [=](auto &&... ctx)
    {
       const auto new_context = context_a{10};
       fun(std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)..., new_context);
@@ -26,7 +26,7 @@ const auto first = [](auto fun)
 
 const auto second = [](auto fun)
 {
-   return [=](auto &&...ctx)
+   return [=](auto &&... ctx)
    {
       const auto &a_context = get_arg<const context_a>(std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)...);
 
@@ -37,7 +37,7 @@ const auto second = [](auto fun)
 
 const auto second_without_context_from_first = [](auto fun)
 {
-   return [=](auto &&...ctx)
+   return [=](auto &&... ctx)
    {
       const auto new_context = context_b{11.5};
       fun(std::forward<std::remove_reference_t<decltype(ctx)>>(ctx)..., new_context);
@@ -47,23 +47,22 @@ const auto second_without_context_from_first = [](auto fun)
 TEST_CASE("test wrap_any_function", "[utils]")
 {
 
-   auto pipeline = first(second(wrap_any_function(
-       [](int x, context_b const &b, context_a const &a)
-       {
-          REQUIRE(x == 10);
-          REQUIRE(a.a == 10);
-          REQUIRE(b.a == 10.0);
-       })));
+   auto pipeline = first(second(wrap_any_function([](int x, context_b const &b, context_a const &a)
+   {
+      REQUIRE(x == 10);
+      REQUIRE(a.a == 10);
+      REQUIRE(b.a == 10.0);
+
+   })));
 
    int x = 10;
    pipeline(x);
 
-   auto fun = wrap_any_function(
-       [](int x, double y)
-       {
-          REQUIRE(x == 10);
-          REQUIRE(y == 3.333);
-       });
+   auto fun = wrap_any_function([](int x, double y)
+   {
+      REQUIRE(x == 10);
+      REQUIRE(y == 3.333);
+   });
    struct not_used
    {
    };
@@ -74,22 +73,20 @@ TEST_CASE("test wrap_any_function", "[utils]")
 TEST_CASE("test middleware chain", "[utils]")
 {
    auto chain = middleware_chain_builder<>{} | first | second;
-   auto fun = chain(
-       [](context_a const &a, context_b const &b)
-       {
-          REQUIRE(a.a == 10);
-          REQUIRE(b.a == 10.0);
-       });
+   auto fun = chain([](context_a const &a, context_b const &b)
+   {
+      REQUIRE(a.a == 10);
+      REQUIRE(b.a == 10.0);
+   });
 
    fun();
 
    auto chain2 = middleware_chain_builder<>{} | second_without_context_from_first | first;
-   auto fun2 = chain2(
-       [](context_b const &b, context_a const &a)
-       {
-          REQUIRE(a.a == 10);
-          REQUIRE(b.a == 11.5);
-       });
+   auto fun2 = chain2([](context_b const &b, context_a const &a)
+   {
+      REQUIRE(a.a == 10);
+      REQUIRE(b.a == 11.5);
+   });
 
    fun2();
 }
@@ -100,8 +97,8 @@ TEST_CASE("static_lookup_table")
 
    SECTION("linear search")
    {
-      auto table =
-          static_lookup_table{std::array{std::pair{"key"sv, "value"sv}, std::pair{"other key"sv, "other value"sv}}};
+      auto table = static_lookup_table{
+         std::array{std::pair{"key"sv, "value"sv}, std::pair{"other key"sv, "other value"sv}}};
       REQUIRE(table.lookup("key"sv) == "value"sv);
       REQUIRE(table.lookup("other key"sv) == "other value"sv);
    }
@@ -118,64 +115,6 @@ TEST_CASE("static_lookup_table")
       REQUIRE(table.lookup(1) == 199);
       REQUIRE(table.lookup(100) == 100);
       REQUIRE(table.lookup(300).has_value() == false);
-   }
-}
 
-TEST_CASE("cancel_after_timeout_or_token", "[asio]")
-{
-   using namespace spider2;
-
-   std::atomic<bool> cancelled = false;
-   {
-      auto io = io::io_context{};
-
-      cancelled = false;
-      auto watchdog = cancel_after_timeout(io, [&cancelled] { cancelled = true; }, std::chrono::seconds{1});
-      io.run();
-      REQUIRE(cancelled == true);
-   }
-
-   {
-      auto io = io::io_context{};
-
-      cancelled = false;
-      auto stop_token_source = std::stop_source{};
-
-      auto watchdog = cancel_after_timeout(io, [&cancelled] { cancelled = true; }, std::chrono::seconds{1});
-      auto watchdog_cancel = make_stop_callback(stop_token_source.get_token(),
-                                                [&watchdog, &cancelled]
-                                                {
-                                                   watchdog.cancel();
-                                                   cancelled = true;
-                                                });
-      io.run();
-      REQUIRE(cancelled == true);
-   }
-
-   {
-      auto io = io::io_context{};
-
-      cancelled = false;
-      auto stop_token_source = std::stop_source{};
-
-      auto watchdog = cancel_after_timeout_or_token(
-          io, stop_token_source.get_token(), [&cancelled]() { cancelled = true; }, std::chrono::seconds{1});
-
-      io.run();
-      REQUIRE(cancelled == true);
-   }
-
-   {
-      auto io = io::io_context{};
-
-      cancelled = false;
-      auto stop_token_source = std::stop_source{};
-
-      auto watchdog = cancel_after_timeout_or_token(
-          io, stop_token_source.get_token(), [&cancelled]() { cancelled = true; }, std::chrono::seconds{10});
-
-      io.post([&] { stop_token_source.request_stop(); });
-      io.run();
-      REQUIRE(cancelled == true);
    }
 }

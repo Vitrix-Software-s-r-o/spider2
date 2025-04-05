@@ -5,7 +5,6 @@
 #pragma once
 
 #include "../types.h"
-
 #include "make_async_execution_handler.h"
 
 namespace spider2

@@ -16,6 +16,42 @@
 namespace spider2
 {
 
+   inline void run_io_context(io::io_context &io_loop, server_config const &config, app_context_base &context)
+   {
+      context.lifecycle_indicator.thread_started();
+      bool has_run = false;
+      while (!context.token.stop_requested())
+      {
+         try
+         {
+            if (has_run)
+            {
+               io_loop.restart();
+            }
+            else
+            {
+               has_run = true;
+            }
+
+            io_loop.run();
+         }
+         catch (const std::exception &ex)
+         {
+            if (context.event_handler != nullptr)
+               context.event_handler->on_io_thread_exception(&ex);
+            else
+               std::cerr << "spider2::io_thread_exception: " << ex.what() << std::endl;
+         }
+         catch (...)
+         {
+            if (context.event_handler != nullptr)
+               context.event_handler->on_io_thread_exception(nullptr);
+            else
+               std::cerr << "spider2::io_thread_exception: unknown" << std::endl;
+         }
+      }
+   }
+
    auto run_web_app(io::io_context &io_loop, server_config const &config, app_context_base &context,
                     auto request_processor_fun) -> void
    {
@@ -41,43 +77,14 @@ namespace spider2
 
          if (io_threads_count == 1)
          {
-            context.lifecycle_indicator.thread_started();
-            io_loop.run();
+            run_io_context(io_loop, config, context);
          }
          else
          {
-
             vector<std::jthread> threads;
             for (std::size_t i = 0; i != io_threads_count; ++i)
             {
-
-               threads.push_back(std::jthread{[=, &io_loop, &context]
-                                              {
-                                                 context.lifecycle_indicator.thread_started();
-                                                 while (!context.token.stop_requested())
-                                                 {
-                                                    try
-                                                    {
-                                                       io_loop.run();
-                                                    }
-                                                    catch (const std::exception &ex)
-                                                    {
-                                                       if (context.event_handler != nullptr)
-                                                          context.event_handler->on_io_thread_exception(&ex);
-                                                       else
-                                                          std::cerr << "spider2::io_thread_exception: " << ex.what()
-                                                                    << std::endl;
-                                                    }
-                                                    catch (...)
-                                                    {
-                                                       if (context.event_handler != nullptr)
-                                                          context.event_handler->on_io_thread_exception(nullptr);
-                                                       else
-                                                          std::cerr << "spider2::io_thread_exception: unknown"
-                                                                    << std::endl;
-                                                    }
-                                                 }
-                                              }});
+               threads.push_back(std::jthread{[=, &io_loop, &context] { run_io_context(io_loop, config, context); }});
             }
 
             for (auto &thread : threads)

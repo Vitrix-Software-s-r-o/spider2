@@ -39,7 +39,7 @@ TEST_CASE("prometheus class", "[prometheus]")
    SECTION("counter with labels")
    {
       auto counter =
-         manager.create<prom::counter>({.name = "counter", .help = "counter help", .labels = "label=\"test\""});
+          manager.create<prom::counter>({.name = "counter", .help = "counter help", .labels = "label=\"test\""});
       counter.increment();
       counter.increment();
       counter.increment();
@@ -52,8 +52,8 @@ TEST_CASE("prometheus class", "[prometheus]")
    SECTION("histogram<double>")
    {
       auto histogram = manager.create<prom::histogram<double>>(
-         {.name = "histogram", .help = "histogram help"},
-         std::vector<double>{1.5, 5.5, 10.5, std::numeric_limits<double>::max()}, true);
+          {.name = "histogram", .help = "histogram help"},
+          std::vector<double>{1.5, 5.5, 10.5, std::numeric_limits<double>::max()}, true);
 
       histogram.observe(1.);
       histogram.observe(1.);
@@ -67,7 +67,7 @@ TEST_CASE("prometheus class", "[prometheus]")
 
       auto result = manager.format_metrics();
       REQUIRE(result ==
-         R"(# HELP histogram_bucket histogram help
+              R"(# HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
 histogram_bucket{le="1.5"} 3
 # HELP histogram_bucket histogram help
@@ -91,8 +91,8 @@ histogram_count 9
    SECTION("histogram<int64>")
    {
       auto histogram = manager.create<prom::histogram<std::int64_t>>(
-         {.name = "histogram", .help = "histogram help"},
-         std::vector<int64_t>{1, 5, 10, std::numeric_limits<int64_t>::max()}, true);
+          {.name = "histogram", .help = "histogram help"},
+          std::vector<int64_t>{1, 5, 10, std::numeric_limits<int64_t>::max()}, true);
 
       histogram.observe(1);
       histogram.observe(1);
@@ -106,7 +106,7 @@ histogram_count 9
 
       auto result = manager.format_metrics();
       REQUIRE(result ==
-         R"(# HELP histogram_bucket histogram help
+              R"(# HELP histogram_bucket histogram help
 # TYPE histogram_bucket counter
 histogram_bucket{le="1"} 3
 # HELP histogram_bucket histogram help

@@ -97,9 +97,8 @@ namespace spider2
       {
          co_return (co_await std::visit(
              overload{
-                 [](with_no_response &) noexcept -> io::awaitable<tuple<error_code, size_t>> {
-                    co_return tuple<error_code, size_t>{{}, {}};
-                 },
+                 [](with_no_response &) noexcept -> io::awaitable<tuple<error_code, size_t>>
+                 { co_return tuple<error_code, size_t>{{}, {}}; },
                  [&](file_response &response) noexcept -> io::awaitable<tuple<error_code, size_t>>
                  {
                     apply_keep_alive(response);
@@ -268,7 +267,9 @@ namespace spider2
          using result_type = decltype(visitor(test_obj));
          if constexpr (std::is_void_v<result_type>)
          {
-            std::visit(overload{[](with_no_response const &) -> result_type {}, std::forward<Fun>(visitor)}, message);
+            std::visit(overload{[](with_no_response const &) -> result_type { return result_type{}; },
+                                std::forward<Fun>(visitor)},
+                       message);
          }
          else
          {
@@ -293,6 +294,11 @@ namespace spider2
              overload{[](http::response<response_body> const &msg) -> http::response<response_body> const *
                       { return &msg; }, [](auto const &) -> http::response<response_body> const * { return nullptr; }},
              message);
+      }
+
+      inline auto is_handled_with_no_response() const noexcept -> bool
+      {
+         return std::holds_alternative<with_no_response>(message);
       }
 
       [[nodiscard]] auto get_status() const -> http::status
@@ -350,9 +356,8 @@ namespace spider2
       inline auto set_header(http::field header, string_view value) -> void
       {
          std::visit(overload{[](with_no_response &) { throw std::out_of_range{"No response to set header"}; },
-                             [&](auto &msg) {
-                                msg.set(header, boost::beast::string_view{value.data(), value.size()});
-                             }},
+                             [&](auto &msg)
+                             { msg.set(header, boost::beast::string_view{value.data(), value.size()}); }},
                     message);
       }
 
@@ -368,6 +373,7 @@ namespace spider2
       }
 
       template <class Body = http::empty_body>
+      [[nodiscard]]
       static auto make_response_message(http::status status) -> http::response<Body>
       {
          auto message = http::response<Body>{};
@@ -376,6 +382,7 @@ namespace spider2
          return message;
       }
 
+      [[nodiscard]]
       inline static auto return_redirect(string url) -> response
       {
          auto message = make_response_message(http::status::see_other);
@@ -384,6 +391,7 @@ namespace spider2
          return {message};
       }
 
+      [[nodiscard]]
       inline static auto return_string(http::status status, string body, string content_type = "text/html",
                                        optional<http::fields> custom_headers = {}, bool return_body = true) -> response
       {
@@ -414,6 +422,12 @@ namespace spider2
             }
             return {message};
          }
+      }
+
+      [[nodiscard]]
+      inline static auto return_nothing() -> response
+      {
+         return response{with_no_response{}};
       }
    };
 

@@ -17,9 +17,9 @@ if (NOT TARGET ${target})
     target_link_libraries(${target} PUBLIC spider2)
 
     if (SPIDER2_TESTS)
-    add_executable(${target}-tests tests/main.cpp tests/prometheus_tests.cpp
+    add_executable(${target}-tests tests/prometheus_tests.cpp
             tests/prometheus_parser_tests.cpp)
-    target_link_libraries(${target}-tests ${target} spider2-testing ${EXE_LIBS})
+    target_link_libraries(${target}-tests ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})
     target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
         add_test(NAME ${target}-tests COMMAND ${target}-tests)
     endif ()

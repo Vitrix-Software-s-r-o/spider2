@@ -24,36 +24,27 @@ namespace spider2
             auto result = optional<response>{};
             auto exec = [&](auto &handler) -> io::awaitable<bool>
             {
-               return [](auto &handler, auto &req, auto &ep, auto &result, auto &...args) -> io::awaitable<bool>
+               return [](auto &_handler, auto &_req, auto &_ep, auto &_result, auto &..._args) -> io::awaitable<bool>
                {
-                  // result.has_value() prevents further execution if previous handler has already handled the request
-                  // GCC bug in fold expression
-                  if (handler.matches(ep) && !result.has_value())
+                  if (!_result.has_value() && _handler.matches(_ep))
                   {
-                     result = co_await handler.invoke(req, std::forward<Arg>(args)...);
-
-                     // it causes next executor to not run
-                     co_return false;
+                     //    std::cout << "handler matches : " << _ep.path << std::endl;
+                     _result = co_await _handler.invoke(_req, std::forward<Arg>(_args)...);
                   }
-
                   // continue searching
-                  co_return !result.has_value();
+                  co_return !_result.has_value() || !_result->is_handled_with_no_response();
                }(handler, req, ep, result, args...);
             };
 
-            const auto exec_result = co_await std::apply(
+            bool handled = co_await std::apply(
                 [&](auto &...handler) -> io::awaitable<bool>
                 {
-                   return [](auto &exec, auto &...handler) -> io::awaitable<bool>
-                   {
-                      // weird bug in compiler if we use fold expression here
-                      // exec handers are evaluated even if the result is false
-                      co_return (... && co_await exec(handler));
-                   }(exec, handler...);
+                   return [](auto &exec_fun, auto &...handler_fun) -> io::awaitable<bool>
+                   { co_return (... && co_await exec_fun(handler_fun)); }(exec, handler...);
                 },
                 handlers);
 
-            static_cast<void>(exec_result);
+            static_cast<void>(handled);
 
             if (result.has_value())
                co_return std::move(result.value());
@@ -71,18 +62,33 @@ namespace spider2
             auto result = optional<response>{};
             auto exec = [&](auto &handler) -> io::awaitable<bool>
             {
-               if (handler.matches(ep))
+               return [](auto &_req, auto &_result, auto &_ep, auto &_handler, Arg &&..._args) -> io::awaitable<bool>
                {
-                  result = co_await handler.invoke(req, std::forward<Arg>(args)...);
-                  co_return result->get_status() == status::not_found;
-               }
+                  if (!_result.has_value() && _handler.matches(_ep))
+                  {
+                     // std::cout << "2. handler matches : " << _ep.path << std::endl;
+                     _result = co_await _handler.invoke(_req, std::forward<Arg>(_args)...);
 
-               // continue searching
-               co_return true;
+                     if (_result.has_value() && _result->get_status() == status::not_found)
+                     {
+                        _result.reset();
+                     }
+                  }
+
+                  // continue searching
+                  co_return !_result.has_value() || !_result->is_handled_with_no_response();
+               }(req, result, ep, handler, args...);
             };
 
-            bool handled = co_await std::apply([&](auto &...handler) -> io::awaitable<bool>
-                                               { co_return (... && co_await exec(handler)); }, handlers);
+            bool handled = co_await std::apply(
+                [&](auto &...handler) -> io::awaitable<bool>
+                {
+                   return [](auto &exec_fun, auto &...handler_fun) -> io::awaitable<bool>
+                   { co_return (... && co_await exec_fun(handler_fun)); }(exec, handler...);
+                },
+                handlers);
+
+            static_cast<void>(handled);
 
             if (result.has_value())
                co_return std::move(result.value());

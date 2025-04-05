@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Canvas Clock</title>
+    <style>
+        canvas {
+            background-color: #f0f0f0;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+<h1>Spider Test Site</h1>
+<canvas id="clockCanvas" width="200" height="200"></canvas>
+<div id="clock"></div>
+<pre id="websocket"></pre>
+
+<script>
+    const canvas = document.getElementById("clockCanvas");
+    const ctx = canvas.getContext("2d");
+    let serverTime = new Date();
+
+    function drawClock() {
+        const now = serverTime;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = Math.min(centerX, centerY) - 5;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw clock face
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = "white";
+        ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw clock hands
+        const hours = now.getHours() % 12;
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
+
+        function drawHand(length, angle, width, color) {
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + length * Math.cos(angle), centerY + length * Math.sin(angle));
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = "round";
+            ctx.stroke();
+        }
+
+        const hourAngle = ((hours + minutes / 60) * 30 - 90) * (Math.PI / 180);
+        const minuteAngle = ((minutes + seconds / 60) * 6 - 90) * (Math.PI / 180);
+        const secondAngle = (seconds * 6 - 90) * (Math.PI / 180);
+
+        drawHand(radius * 0.5, hourAngle, 6, "black");
+        drawHand(radius * 0.7, minuteAngle, 4, "black");
+        drawHand(radius * 0.8, secondAngle, 2, "red");
+    }
+
+    // WebSocket connection
+    const port = window.location.port;
+    const websocket = document.getElementById("websocket");
+
+    const ws = new WebSocket("ws://" + window.location.hostname + (port ? ":" + port : "") + "/ws", "spider-protocol");
+    ws.onopen = function () {
+        websocket.innerText += "Connected to server\n";
+        ws.send("Hello, server!");
+    };
+    ws.onclose = function () {
+        websocket.innerText += "Disconnected from server\n";
+    };
+    let animationFrameRequestId = null;
+    const clockEl = document.getElementById("clock");
+    ws.onmessage = function (event) {
+        const timePrefixRegex = /time: (\d{2}):(\d{2}):(\d{2})/;
+        const match = event.data.match(timePrefixRegex);
+        if (match) {
+            const [_, hours, minutes, seconds] = match;
+            serverTime = new Date();
+            serverTime.setHours(parseInt(hours, 10));
+            serverTime.setMinutes(parseInt(minutes, 10));
+            serverTime.setSeconds(parseInt(seconds, 10));
+
+            if (animationFrameRequestId !== null) {
+                cancelAnimationFrame(animationFrameRequestId);
+            }
+            animationFrameRequestId = requestAnimationFrame(() => {
+                drawClock();
+                clockEl.innerHTML = [hours, minutes, seconds].join(":");
+                animationFrameRequestId = null;
+            });
+
+            return;
+        }
+        websocket.innerText += "Received: " + event.data + "\n";
+    };
+</script>
+</body>
+</html>

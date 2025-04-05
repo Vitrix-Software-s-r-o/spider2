@@ -15,3 +15,6 @@
 
 #include "structs/cache_backend.h"
 #include "structs/memory_cache_backend.h"
+#include "structs/message_queue.h"
+#include "structs/websocket_connection.h"
+#include "structs/websocket_event_handler.h"

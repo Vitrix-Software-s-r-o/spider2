@@ -4,3 +4,4 @@
 
 #pragma once
 #include "handlers/static_files.h"
+#include "handlers/websocket.h"

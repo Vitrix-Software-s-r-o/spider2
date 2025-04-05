@@ -56,6 +56,14 @@ set(spider2_Sources
         include/spider2/routing/api_endpoint/read_api_request.h
         include/spider2/routing/api_endpoint/parse_api_request.h
         include/spider2/routing/api_endpoint/format_api_response.h
+        src/base64.h
+        src/base64.cpp
+        include/spider2/handlers/websocket.h
+        include/spider2/types/structs/websocket_connection.h
+        include/spider2/types/structs/websocket_event_handler.h
+        include/spider2/types/structs/message_queue.h
+        include/spider2/types/structs/cancellation_timer.h
+
 )
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -75,27 +83,31 @@ if (NOT TARGET ${target})
     target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_include_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-    if (SPIDER2_ENABLE_EXAMPLES)
-    add_executable(${target}-example main.cpp)
+    add_executable(${target}-example main.cpp test-site/index.html)
     target_link_libraries(${target}-example spider2 ${EXE_LIBS})
     target_include_directories(${target}-example PRIVATE ${Boost_INCLUDE_DIR})
     endif ()
 
-    if (SPIDER2_TESTS)
-    add_executable(${target}-tests
-            tests/utils_tests.cpp
-            tests/main.cpp
-            tests/request_routing_tests.cpp
-            tests/mime_table_tests.cpp
-            tests/async_file_tests.cpp
-            tests/tag_invoke_tests.cpp
-            tests/api_request_tests.cpp
-            tests/tuple_tests.cpp
+    add_custom_command(TARGET ${target}-example POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMAND ${CMAKE_COMMAND} -E copy_directory test-site $<TARGET_PROPERTY:${target},BINARY_DIR>/test-site
+            COMMENT "Copying test-site to target directory of ${target}"
     )
-    target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})
-    target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-    if (SPIDER2_EXE_STATIC_RUNTIME)
-        target_link_options(${target}-tests PRIVATE -static -static-libgcc -static-libstdc++)
+
+    if (SPIDER2_TESTS)
+        add_executable(${target}-tests
+                tests/utils_tests.cpp
+                tests/request_routing_tests.cpp
+                tests/mime_table_tests.cpp
+                tests/async_file_tests.cpp
+                tests/tag_invoke_tests.cpp
+                tests/api_request_tests.cpp
+                tests/tuple_tests.cpp
+        )
+
+        target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})
+        target_include_directories(${target}-tests PRIVATE ${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+
     endif ()
         add_test(NAME ${target}-tests COMMAND ${target}-tests)
     endif ()

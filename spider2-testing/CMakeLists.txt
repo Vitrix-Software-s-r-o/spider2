@@ -10,5 +10,5 @@ if (NOT TARGET ${target})
     target_include_directories(${target} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
     MESSAGE(STATUS "spider2-testing:${CMAKE_CURRENT_SOURCE_DIR}")
-    target_link_libraries(${target} INTERFACE spider2 Catch2::Catch2 Catch2::Catch2WithMain)
+    target_link_libraries(${target} INTERFACE spider2 Catch2::Catch2)
 endif ()
