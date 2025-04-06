@@ -64,7 +64,7 @@ auto make_test_api_app()
                            ctx.enter();
 
                            auto timer = io::steady_timer{exec};
-                           timer.expires_from_now(2s);
+                           timer.expires_after(2s);
 
                            ctx.suspend();
                            auto [ec] = co_await timer.async_wait(use_tuple_awaitable);

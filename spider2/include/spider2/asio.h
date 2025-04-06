@@ -16,7 +16,7 @@ namespace spider2
        -> io::steady_timer
    {
       auto timer = io::steady_timer{context};
-      timer.expires_from_now(duration);
+      timer.expires_after(duration);
       timer.async_wait(
           [=](boost::system::error_code const &ec)
           {

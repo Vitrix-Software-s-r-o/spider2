@@ -44,7 +44,7 @@ else ()
 endif ()
 
 find_path(CPP_BASE64_INCLUDE_DIRS "cpp-base64/base64.cpp")
-find_package(Boost 1.79.0 REQUIRED COMPONENTS system filesystem program_options date_time iostreams)
+find_package(Boost 1.87.0 REQUIRED COMPONENTS system filesystem program_options date_time iostreams)
 find_package(fmt CONFIG REQUIRED)
 find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
