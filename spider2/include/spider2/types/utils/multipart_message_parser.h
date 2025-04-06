@@ -6,6 +6,7 @@
 #include "../platform.h"
 #include "spider2/types/structs/request_error_code.h"
 
+#include <fmt/base.h>
 #include <utility>
 
 namespace spider2
@@ -27,6 +28,7 @@ namespace spider2
           : boundary_(boundary), handler_(handler)
       {
          buffer_.reserve(8096);
+         temp_buffer_.reserve(8096);
       }
 
       void on_data(std::span<const std::byte> data, error_code &ec)
@@ -44,7 +46,12 @@ namespace spider2
          }
       }
 
-      void on_finish() {}
+      void on_finish()
+      {
+         if (!buffer_.empty())
+         {
+         }
+      }
 
       [[nodiscard]]
       auto get_processed_size() const -> std::size_t
@@ -67,6 +74,8 @@ namespace spider2
 
       std::string_view boundary_;
       std::vector<std::byte> buffer_;
+      std::vector<std::byte> temp_buffer_;
+
       std::size_t processed_ = 0;
       EventHandlerT &handler_;
 
@@ -77,11 +86,13 @@ namespace spider2
 
          for (; it != end;)
          {
-
             switch (state_)
             {
             case parser_state::preamble:
-               it = on_preamble(it, end);
+               if (on_preamble(it, end))
+               {
+                  buffer_to_front(it, end);
+               }
                break;
             case parser_state::part_begin:
                it = on_part_begin(it, end);
@@ -93,14 +104,21 @@ namespace spider2
          }
       }
 
-      auto on_preamble(const iterator_type it, const iterator_type end) -> iterator_type
+      auto buffer_to_front(iterator_type it, iterator_type end) noexcept
+      {
+         std::copy(it, end, std::back_inserter(temp_buffer_));
+         std::swap(buffer_, temp_buffer_);
+         temp_buffer_.clear();
+      }
+
+      auto on_preamble(iterator_type &it, const iterator_type end) -> bool
       {
          auto result_it = std::find(it, end, '-');
          if (result_it != end)
          {
-            result_it = on_possible_boundary(result_it, end);
+            return on_possible_boundary(result_it, end);
          }
-         return result_it;
+         return true;
       }
 
       /// Called when a possible boundary is found.
@@ -109,11 +127,11 @@ namespace spider2
       /// @param it - first character of the possible boundary
       /// @param end - end of the buffer
       /// @return
-      auto on_possible_boundary(iterator_type it, const iterator_type &end, error_code &ec) -> iterator_type
+      auto on_possible_boundary(iterator_type it, const iterator_type &end, error_code &ec) -> bool
       {
          if (std::distance(it, end) < boundary_.size() + 6 /* --boundary(--)\r\n*/)
          {
-            return end;
+            return true;
          }
 
          if (if_value_advance<>(it, "--") && if_boundary_advance(it))
@@ -123,19 +141,22 @@ namespace spider2
             {
                // I found the end of the message
                state_ = parser_state::end;
+               return false;
             }
             else if (if_value_advance<>(it, "\r\n"))
             {
                // I found the beginning of a part
                state_ = parser_state::part_begin;
+               return false;
             }
             else
             {
-               ec = {};
+               ec = make_error_code(request_error_code::body_read_error);
             }
          }
 
-         return it;
+         ++it;
+         return false;
       }
 
       template <size_t N>
