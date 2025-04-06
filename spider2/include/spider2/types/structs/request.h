@@ -7,6 +7,7 @@
 #include "spider2/types/platform.h"
 #include "spider2/types/utils/overload.h"
 
+#include "any_message_body.h"
 #include "endpoint.h"
 #include "request_error_code.h"
 
@@ -16,7 +17,8 @@ namespace spider2
 
    struct request
    {
-      using any_message_type = std::variant<http::request<http::empty_body>, http::request<http::string_body>>;
+      using any_message_type = std::variant<http::request<http::empty_body>, http::request<http::string_body>,
+                                            http::request<any_message_body>>;
 
       inline request(tcp::socket &s, flat_buffer &b, app_context_base &ctx);
 
@@ -61,7 +63,10 @@ namespace spider2
 
       template <class BodyT>
       [[nodiscard]] inline auto read_body(optional<std::uint64_t> body_limit = {}) noexcept
-         -> io::awaitable<error_code>;
+          -> io::awaitable<error_code>;
+
+      [[nodiscard]] inline auto read_body(any_message_reader &reader, optional<std::uint64_t> body_limit = {}) noexcept
+          -> io::awaitable<error_code>;
 
       [[nodiscard]] inline auto has_request_body() const noexcept -> bool;
 
@@ -91,7 +96,7 @@ namespace spider2
          return ctx_;
       }
 
-   protected:
+    protected:
       tcp::socket *socket_ = nullptr;
       flat_buffer *buffer_ = nullptr;
       app_context_base &ctx_;
@@ -143,10 +148,20 @@ namespace spider2
          socket_->shutdown(boost::asio::socket_base::shutdown_both, ec);
          socket_->close(ec);
       }
+
+      [[nodiscard]]
+      inline auto on_read_body_init() const -> error_code;
+
+      template <class BodyT>
+      auto on_set_request_limit(http::request_parser<BodyT> &body_parser, std::optional<std::size_t> const &limit) const
+          -> void;
+
+      template <class BodyT>
+      [[nodiscard]]
+      auto read_body_from_socket(http::request_parser<BodyT> &parser) -> io::awaitable<error_code>;
    };
 
-   request::request(tcp::socket &s, flat_buffer &b, app_context_base &ctx)
-      : socket_(&s), buffer_(&b), ctx_(ctx)
+   request::request(tcp::socket &s, flat_buffer &b, app_context_base &ctx) : socket_(&s), buffer_(&b), ctx_(ctx)
    {
       auto r_ec = error_code{};
       const auto remote_endpoint = socket_->remote_endpoint(r_ec);
@@ -157,8 +172,7 @@ namespace spider2
    }
 
    template <class BodyT>
-   request::request(http::request<BodyT> direct_request, app_context_base &ctx)
-      : socket_(nullptr), ctx_(ctx)
+   request::request(http::request<BodyT> direct_request, app_context_base &ctx) : socket_(nullptr), ctx_(ctx)
    {
       client_ip_ = io::ip::address_v4::loopback();
       fill(direct_request);
@@ -186,9 +200,7 @@ namespace spider2
    {
       if (read_body_called_ || parser_.is_done())
       {
-         return std::visit([](auto &message) -> http::fields const &{
-            return message;
-         }, this->message_);
+         return std::visit([](auto &message) -> http::fields const & { return message; }, this->message_);
       }
       else
       {
@@ -270,26 +282,16 @@ namespace spider2
    template <class BodyT>
    [[nodiscard]] auto request::try_get_message() const noexcept -> const http::request<BodyT> *
    {
-      return std::visit(overload{[](http::request<BodyT> const &msg) -> decltype(&msg)
-                                 {
-                                    return &msg;
-                                 },
-                                 [](auto &) -> http::request<BodyT> const *{
-                                    return nullptr;
-                                 }},
+      return std::visit(overload{[](http::request<BodyT> const &msg) -> decltype(&msg) { return &msg; },
+                                 [](auto &) -> http::request<BodyT> const * { return nullptr; }},
                         message_);
    }
 
    template <class BodyT>
    [[nodiscard]] auto request::try_get_message() noexcept -> http::request<BodyT> *
    {
-      return std::visit(overload{[](http::request<BodyT> &msg) -> decltype(&msg)
-                                 {
-                                    return &msg;
-                                 },
-                                 [](auto &) -> http::request<BodyT> *{
-                                    return nullptr;
-                                 }},
+      return std::visit(overload{[](http::request<BodyT> &msg) -> decltype(&msg) { return &msg; },
+                                 [](auto &) -> http::request<BodyT> * { return nullptr; }},
                         message_);
    }
 
@@ -313,7 +315,7 @@ namespace spider2
       raw_path_include_query_.clear();
 
       auto [ec, bytes] =
-         co_await http::async_read_header(*socket_, *buffer_, parser_, ioe::as_tuple(io::use_awaitable));
+          co_await http::async_read_header(*socket_, *buffer_, parser_, ioe::as_tuple(io::use_awaitable));
       if (!ec)
       {
          fill(parser_.get());
@@ -333,7 +335,42 @@ namespace spider2
 
    template <class BodyT>
    [[nodiscard]] inline auto request::read_body(optional<std::uint64_t> body_limit) noexcept
-      -> io::awaitable<error_code>
+       -> io::awaitable<error_code>
+   {
+      static_assert(!std::is_same_v<BodyT, any_message_body>, "Use a later overload for any_message_body");
+
+      if (auto ec = this->on_read_body_init(); ec)
+      {
+         co_return ec;
+      }
+      read_body_called_ = true;
+
+      auto body_parser = http::request_parser<BodyT>{std::move(parser_)};
+
+      on_set_request_limit(body_parser, body_limit);
+
+      co_return (co_await read_body_from_socket(body_parser));
+   }
+
+   inline auto request::read_body(any_message_reader &reader, optional<std::uint64_t> body_limit) noexcept
+       -> io::awaitable<error_code>
+   {
+      if (auto ec = this->on_read_body_init(); ec)
+      {
+         co_return ec;
+      }
+
+      read_body_called_ = true;
+
+      auto body_parser = http::request_parser<any_message_body>{std::move(parser_)};
+      on_set_request_limit(body_parser, body_limit);
+
+      body_parser.get().body() = &reader;
+
+      co_return (co_await read_body_from_socket(body_parser));
+   }
+
+   auto request::on_read_body_init() const -> error_code
    {
       auto precondition_ec = [&]()
       {
@@ -356,12 +393,15 @@ namespace spider2
 
       if (precondition_ec.has_value())
       {
-         co_return precondition_ec.value();
+         return precondition_ec.value();
       }
 
-      read_body_called_ = true;
-
-      auto body_parser = http::request_parser<BodyT>{std::move(parser_)};
+      return {};
+   }
+   template <class BodyT>
+   auto request::on_set_request_limit(http::request_parser<BodyT> &body_parser,
+                                      std::optional<std::size_t> const &body_limit) const -> void
+   {
       if constexpr (std::is_same_v<BodyT, http::string_body>)
       {
          body_parser.body_limit(body_limit.value_or(10000000));
@@ -370,18 +410,20 @@ namespace spider2
       {
          body_parser.body_limit(body_limit.value_or(static_cast<std::uint64_t>(-1)));
       }
+   }
 
+   template <class BodyT>
+   auto request::read_body_from_socket(http::request_parser<BodyT> &body_parser) -> io::awaitable<error_code>
+   {
       auto [ec, bytes] = co_await http::async_read(*socket_, *buffer_, body_parser, ioe::as_tuple(io::use_awaitable));
       if (!ec)
       {
          message_ = body_parser.release();
-         //  parser_ = http::request_parser<http::empty_body>{std::move(body_parser)};
       }
       else
       {
          disconnect_on_error();
       }
-
       co_return ec;
    }
 

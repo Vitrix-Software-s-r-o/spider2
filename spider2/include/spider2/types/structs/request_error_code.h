@@ -16,7 +16,8 @@ namespace spider2
       socket_stolen = 3,
 
       not_implemented = 4,
-      api_input_data_error = 5
+      api_input_data_error = 5,
+      body_read_error_no_parser = 6
    };
 
    namespace detail
@@ -42,12 +43,16 @@ namespace spider2
                return "ok";
             case request_error_code::header_read_error:
                return "header read error";
+            case request_error_code::body_read_error:
+               return "body read error";
             case request_error_code::socket_stolen:
                return "socket stolen";
             case request_error_code::not_implemented:
                return "not implemented";
             case request_error_code::api_input_data_error:
                return "api input data error";
+            case request_error_code::body_read_error_no_parser:
+               return "body read error no parser";
             default:
                return "unknown";
             }
