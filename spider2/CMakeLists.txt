@@ -63,6 +63,9 @@ set(spider2_Sources
         include/spider2/types/structs/websocket_event_handler.h
         include/spider2/types/structs/message_queue.h
         include/spider2/types/structs/cancellation_timer.h
+        include/spider2/types/structs/multipart_message_body.h
+        src/mulitpart_message_parser.cpp
+        include/spider2/types/utils/multipart_message_parser.h
 
 )
 

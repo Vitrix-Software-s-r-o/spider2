@@ -1,0 +1,9 @@
+# docker-compose.yml
+
+services:
+  spider2-build:
+    image: docker.vitrix.cz/spider2-build:14
+    build:
+      context: ../..
+      dockerfile: ./containers/spider2-build/Dockerfile
+
