@@ -64,7 +64,6 @@ set(spider2_Sources
         include/spider2/types/structs/message_queue.h
         include/spider2/types/structs/cancellation_timer.h
         include/spider2/types/structs/multipart_message_body.h
-        src/mulitpart_message_parser.cpp
         include/spider2/types/utils/multipart_message_parser.h
 
 )
@@ -106,6 +105,7 @@ if (NOT TARGET ${target})
                 tests/tag_invoke_tests.cpp
                 tests/api_request_tests.cpp
                 tests/tuple_tests.cpp
+                tests/multipart_parser_tests.cpp
         )
 
         target_link_libraries(${target}-tests ${Boost_LIBRARIES} ${target} spider2-testing Catch2::Catch2WithMain ${EXE_LIBS})

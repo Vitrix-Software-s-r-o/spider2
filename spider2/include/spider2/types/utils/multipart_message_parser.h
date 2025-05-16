@@ -22,13 +22,13 @@ namespace spider2
    template <multipart_event_handler EventHandlerT>
    class multipart_message_parser
    {
-
     public:
       explicit multipart_message_parser(std::string_view boundary, EventHandlerT &handler)
           : boundary_(boundary), handler_(handler)
       {
          buffer_.reserve(8096);
          temp_buffer_.reserve(8096);
+         preamble_parser_.header_limit(8096);
       }
 
       void on_data(std::span<const std::byte> data, error_code &ec)
@@ -40,7 +40,7 @@ namespace spider2
 
             if (buffer_.size() == buffer_.capacity())
             {
-               on_process_buffer();
+               on_process_buffer(ec);
             }
             consumed += remaining;
          }
@@ -70,6 +70,7 @@ namespace spider2
 
       using iterator_type = std::vector<std::byte>::const_iterator;
 
+      http::request_parser<http::empty_body> preamble_parser_;
       parser_state state_ = parser_state::preamble;
 
       std::string_view boundary_;
@@ -79,7 +80,7 @@ namespace spider2
       std::size_t processed_ = 0;
       EventHandlerT &handler_;
 
-      void on_process_buffer()
+      void on_process_buffer(error_code &ec)
       {
          auto it = buffer_.cbegin();
          const auto end = buffer_.cend();
@@ -89,16 +90,14 @@ namespace spider2
             switch (state_)
             {
             case parser_state::preamble:
-               if (on_preamble(it, end))
-               {
-                  buffer_to_front(it, end);
-               }
+               on_preamble(it, end, ec);
+               buffer_to_front(it, end);
                break;
             case parser_state::part_begin:
-               it = on_part_begin(it, end);
+               on_part_begin(it, end);
                break;
             case parser_state::part_data:
-               it = on_part_data(it, end);
+               on_part_data(it, end);
                break;
             }
          }
@@ -111,14 +110,20 @@ namespace spider2
          temp_buffer_.clear();
       }
 
-      auto on_preamble(iterator_type &it, const iterator_type end) -> bool
+      auto on_preamble(iterator_type &it, const iterator_type end, error_code &ec)
       {
-         auto result_it = std::find(it, end, '-');
-         if (result_it != end)
+         auto consumed = preamble_parser_.put(std::span{reinterpret_cast<const char *>(it.base()),
+                                                        static_cast<long unsigned int>(std::distance(it, end))},
+                                              ec);
+         it += gsl::narrow_cast<int>(consumed);
+         if (ec && static_cast<http::error>(ec.value()) != http::error::need_more)
          {
-            return on_possible_boundary(result_it, end);
+            handler_.on_part_begin({}, ec);
          }
-         return true;
+         else if (!ec)
+         {
+            handler_.on_part_begin(preamble_parser_.release(), ec);
+         }
       }
 
       /// Called when a possible boundary is found.
