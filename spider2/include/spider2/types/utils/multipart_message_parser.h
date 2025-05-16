@@ -1,7 +1,3 @@
-//
-// Created by jan on 6.4.25.
-//
-
 #pragma once
 #include "../platform.h"
 #include "spider2/types/structs/request_error_code.h"
