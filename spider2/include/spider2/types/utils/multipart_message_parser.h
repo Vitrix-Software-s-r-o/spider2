@@ -13,18 +13,20 @@ namespace spider2
       t.on_part_begin(std::declval<http::fields>(), std::declval<error_code &>());
       t.on_part_data(std::declval<std::span<const std::byte>>(), std::declval<error_code &>());
       t.on_part_end(std::declval<error_code &>());
+      t.on_finish(std::declval<error_code &>());
    };
 
    template <multipart_event_handler EventHandlerT>
    class multipart_message_parser
    {
     public:
+      constexpr std::size_t max_part_header_size = 8096;
+
       explicit multipart_message_parser(std::string_view boundary, EventHandlerT &handler)
           : boundary_(boundary), handler_(handler)
       {
-         buffer_.reserve(8096);
-         temp_buffer_.reserve(8096);
-         preamble_parser_.header_limit(8096);
+         buffer_.reserve(max_part_header_size);
+         temp_buffer_.reserve(max_part_header_size);
       }
 
       void on_data(std::span<const std::byte> data, error_code &ec)
@@ -66,7 +68,6 @@ namespace spider2
 
       using iterator_type = std::vector<std::byte>::const_iterator;
 
-      http::request_parser<http::empty_body> preamble_parser_;
       parser_state state_ = parser_state::preamble;
 
       std::string_view boundary_;
@@ -83,20 +84,98 @@ namespace spider2
 
          for (; it != end;)
          {
-            switch (state_)
+            const bool need_more_data = [&]()
             {
-            case parser_state::preamble:
-               on_preamble(it, end, ec);
+               switch (state_)
+               {
+               case parser_state::preamble:
+                  return on_preamble(it, end, ec);
+               case parser_state::part_begin:
+                  return on_part_begin(it, end);
+               case parser_state::part_data:
+                  return on_part_data(it, end, ec);
+               default:
+                  ec = make_error_code(request_error_code::body_read_error);
+                  return false;
+               }
+            }();
+
+            if (ec)
+            {
+               state_ = parser_state::end;
+            }
+
+            if (state_ == parser_state::end)
+            {
+               handler_.on_finish(ec);
+               break;
+            }
+
+            if (need_more_data)
+            {
                buffer_to_front(it, end);
-               break;
-            case parser_state::part_begin:
-               on_part_begin(it, end);
-               break;
-            case parser_state::part_data:
-               on_part_data(it, end);
                break;
             }
          }
+      }
+
+      auto on_part_begin(iterator_type &it, iterator_type end, error_code &ec) -> bool
+      {
+         for (it = std::find(it, end, '\r'); it != end; it = std::find(it, end, '\r'))
+         {
+            auto search_it = it;
+            if (if_value_advance<>(search_it, "\r\n\r\n"))
+            {
+               auto part_header_parser = http::request_parser<http::empty_body>{};
+               part_header_parser.header_limit(max_part_header_size);
+               part_header_parser.put(
+                   net::const_buffer{buffer_.data(), gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+
+               if (!ec)
+               {
+                  handler_.on_part_begin(part_header_parser.release(), ec);
+               }
+
+               // I found the beginning of a part
+               state_ = parser_state::part_data;
+               it = search_it;
+               return false;
+            }
+         }
+      }
+
+      auto on_part_data(iterator_type &it, iterator_type end, error_code &ec) -> bool
+      {
+         iterator_type search_it = it;
+
+         const auto flush_part = [&]()
+         {
+            if (it != search_it && !ec)
+            {
+               handler_.on_part_data(
+                   std::span<const std::byte>{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+               it = search_it;
+            }
+         };
+
+         bool needs_more_data = false;
+         for (search_it = std::find(search_it, end, '-'); search_it != end && !ec && !needs_more_data;
+              search_it = std::find(++search_it, end, '-'))
+         {
+            auto boundary_it = search_it;
+            needs_more_data = on_possible_boundary(boundary_it, end, ec);
+            flush_part();
+
+            if (state_ != parser_state::part_data)
+            {
+               handler_.on_part_end(ec);
+               it = boundary_it;
+               return false;
+            }
+         }
+
+         flush_part();
+         return false;
       }
 
       auto buffer_to_front(iterator_type it, iterator_type end) noexcept
@@ -106,20 +185,20 @@ namespace spider2
          temp_buffer_.clear();
       }
 
-      auto on_preamble(iterator_type &it, const iterator_type end, error_code &ec)
+      /// Wait for the preamble to be found --boundary--\r\n
+      /// \returns true if more data is needed
+      auto on_preamble(iterator_type &it, const iterator_type end, error_code &ec) -> bool
       {
-         auto consumed = preamble_parser_.put(std::span{reinterpret_cast<const char *>(it.base()),
-                                                        static_cast<long unsigned int>(std::distance(it, end))},
-                                              ec);
-         it += gsl::narrow_cast<int>(consumed);
-         if (ec && static_cast<http::error>(ec.value()) != http::error::need_more)
+         if (auto p_it = std::find(it, end, '-'); p_it != end)
          {
-            handler_.on_part_begin({}, ec);
+            if (on_possible_boundary(p_it, end, ec))
+            {
+               it = p_it;
+               return true;
+            }
          }
-         else if (!ec)
-         {
-            handler_.on_part_begin(preamble_parser_.release(), ec);
-         }
+         it = end;
+         return true;
       }
 
       /// Called when a possible boundary is found.
@@ -127,8 +206,8 @@ namespace spider2
       /// ^
       /// @param it - first character of the possible boundary
       /// @param end - end of the buffer
-      /// @return
-      auto on_possible_boundary(iterator_type it, const iterator_type &end, error_code &ec) -> bool
+      /// @return true if more data is needed
+      auto on_possible_boundary(iterator_type &it, const iterator_type &end, error_code &ec) -> bool
       {
          if (std::distance(it, end) < boundary_.size() + 6 /* --boundary(--)\r\n*/)
          {

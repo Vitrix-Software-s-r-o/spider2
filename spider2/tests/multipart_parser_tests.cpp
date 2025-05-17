@@ -4,17 +4,36 @@
 using namespace spider2;
 struct test_message_handler
 {
-   constexpr auto on_part_begin(http::fields fields, error_code &ec) -> void {}
+   auto on_part_begin(http::fields fields, error_code &ec) -> void
+   {
+      parts.emplace_back(fields, std::string{});
+   }
+   auto on_part_data(std::span<const std::byte> data, error_code &ec) -> void
+   {
+      REQUIRE(parts.empty() == false);
+      auto &part = parts.back();
+      part.second.append(reinterpret_cast<const char *>(data.data()), data.size());
+   }
 
-   constexpr auto on_part_data(std::span<const std::byte> data, error_code &ec) -> void {}
+   auto on_part_end(error_code &ec) -> void
+   {
+      ++parts_count;
+   }
 
-   constexpr auto on_part_end(error_code &ec) -> void {}
+   auto on_finish(error_code &ec) -> void
+   {
+      ++finish_count;
+   }
+
+   std::vector<std::pair<http::fields, std::string>> parts;
+   std::size_t parts_count = 0;
+   std::size_t finish_count = 0;
 };
 
 static_assert(multipart_event_handler<test_message_handler>,
               "test_message_handler should satisfy multipart_event_handler concept");
 
-TEST_CASE("test multipart_parser", "[multipart_parser]")
+TEST_CASE("test simple multipart_parser", "[multipart_parser]")
 {
 
    auto handler = test_message_handler{};
@@ -27,4 +46,9 @@ TEST_CASE("test multipart_parser", "[multipart_parser]")
 
    parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
    REQUIRE(!ec);
+   REQUIRE(handler.finish_count == 1);
+   REQUIRE(handler.parts_count == 1);
+   REQUIRE(handler.parts.size() == 1);
+   REQUIRE(handler.parts[0].first["Content-Disposition"] == "form-data; name=\"file\"; filename=\"test.txt\"");
+   REQUIRE(handler.parts[0].second == "Hello World\r\n");
 }
