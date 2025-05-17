@@ -37,7 +37,7 @@ TEST_CASE("test simple multipart_parser", "[multipart_parser]")
 {
 
    auto handler = test_message_handler{};
-   auto parser = multipart_message_parser{"--boundary", handler};
+   auto parser = multipart_message_parser{"boundary", handler};
 
    std::string_view data =
        "--boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n\r\nHello "
@@ -45,6 +45,8 @@ TEST_CASE("test simple multipart_parser", "[multipart_parser]")
    error_code ec;
 
    parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
    REQUIRE(!ec);
    REQUIRE(handler.finish_count == 1);
    REQUIRE(handler.parts_count == 1);

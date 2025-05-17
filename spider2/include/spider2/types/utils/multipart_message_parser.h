@@ -2,6 +2,7 @@
 #include "../platform.h"
 #include "spider2/types/structs/request_error_code.h"
 
+#include <ranges>
 #include <fmt/base.h>
 #include <utility>
 
@@ -9,7 +10,8 @@ namespace spider2
 {
 
    template <class T>
-   concept multipart_event_handler = requires(T t) {
+   concept multipart_event_handler = requires(T t)
+   {
       t.on_part_begin(std::declval<http::fields>(), std::declval<error_code &>());
       t.on_part_data(std::declval<std::span<const std::byte>>(), std::declval<error_code &>());
       t.on_part_end(std::declval<error_code &>());
@@ -19,11 +21,11 @@ namespace spider2
    template <multipart_event_handler EventHandlerT>
    class multipart_message_parser
    {
-    public:
-      constexpr std::size_t max_part_header_size = 8096;
+   public:
+      constexpr static std::size_t max_part_header_size = 8096;
 
       explicit multipart_message_parser(std::string_view boundary, EventHandlerT &handler)
-          : boundary_(boundary), handler_(handler)
+         : boundary_(boundary), handler_(handler)
       {
          buffer_.reserve(max_part_header_size);
          temp_buffer_.reserve(max_part_header_size);
@@ -44,10 +46,11 @@ namespace spider2
          }
       }
 
-      void on_finish()
+      void on_finish(error_code &ec)
       {
-         if (!buffer_.empty())
+         if (!buffer_.empty() && state_ != parser_state::end)
          {
+            on_process_buffer(ec);
          }
       }
 
@@ -57,7 +60,7 @@ namespace spider2
          return processed_;
       }
 
-    private:
+   private:
       enum class parser_state
       {
          preamble,
@@ -91,7 +94,7 @@ namespace spider2
                case parser_state::preamble:
                   return on_preamble(it, end, ec);
                case parser_state::part_begin:
-                  return on_part_begin(it, end);
+                  return on_part_begin(it, end, ec);
                case parser_state::part_data:
                   return on_part_data(it, end, ec);
                default:
@@ -121,27 +124,28 @@ namespace spider2
 
       auto on_part_begin(iterator_type &it, iterator_type end, error_code &ec) -> bool
       {
-         for (it = std::find(it, end, '\r'); it != end; it = std::find(it, end, '\r'))
+         for (it = std::find(it, end, std::byte{'\r'}); it != end; it = std::find(it + 1, end, std::byte{'\r'}))
          {
             auto search_it = it;
-            if (if_value_advance<>(search_it, "\r\n\r\n"))
+            if (advance_if_equals(search_it, "\r\n\r\n"))
             {
                auto part_header_parser = http::request_parser<http::empty_body>{};
                part_header_parser.header_limit(max_part_header_size);
                part_header_parser.put(
-                   net::const_buffer{buffer_.data(), gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+                  net::const_buffer{buffer_.data(), gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
 
                if (!ec)
                {
                   handler_.on_part_begin(part_header_parser.release(), ec);
+                  // I found the beginning of a part
+                  state_ = parser_state::part_data;
+                  it = search_it;
+                  return false;
                }
-
-               // I found the beginning of a part
-               state_ = parser_state::part_data;
-               it = search_it;
-               return false;
             }
          }
+         ec = make_error_code(request_error_code::header_read_error);
+         return false;
       }
 
       auto on_part_data(iterator_type &it, iterator_type end, error_code &ec) -> bool
@@ -153,17 +157,17 @@ namespace spider2
             if (it != search_it && !ec)
             {
                handler_.on_part_data(
-                   std::span<const std::byte>{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+                  std::span<const std::byte>{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
                it = search_it;
             }
          };
 
          bool needs_more_data = false;
-         for (search_it = std::find(search_it, end, '-'); search_it != end && !ec && !needs_more_data;
-              search_it = std::find(++search_it, end, '-'))
+         for (search_it = std::find(search_it, end, std::byte{'-'}); search_it != end && !ec && !needs_more_data;
+              search_it = std::find(search_it + 1, end, std::byte{'-'}))
          {
             auto boundary_it = search_it;
-            needs_more_data = on_possible_boundary(boundary_it, end, ec);
+            needs_more_data = this->on_possible_boundary(boundary_it, end, ec);
             flush_part();
 
             if (state_ != parser_state::part_data)
@@ -189,15 +193,14 @@ namespace spider2
       /// \returns true if more data is needed
       auto on_preamble(iterator_type &it, const iterator_type end, error_code &ec) -> bool
       {
-         if (auto p_it = std::find(it, end, '-'); p_it != end)
+         if (auto p_it = std::find(it, end, std::byte{'-'}); p_it != end)
          {
-            if (on_possible_boundary(p_it, end, ec))
+            if (this->on_possible_boundary(p_it, end, ec))
             {
                it = p_it;
                return true;
             }
          }
-         it = end;
          return true;
       }
 
@@ -214,16 +217,16 @@ namespace spider2
             return true;
          }
 
-         if (if_value_advance<>(it, "--") && if_boundary_advance(it))
+         if (advance_if_equals(it, "--") && if_boundary_advance(it))
          {
             // I found a boundary
-            if (if_value_advance<>(it, "--"))
+            if (advance_if_equals(it, "--"))
             {
                // I found the end of the message
                state_ = parser_state::end;
                return false;
             }
-            else if (if_value_advance<>(it, "\r\n"))
+            else if (advance_if_equals(it, "\r\n"))
             {
                // I found the beginning of a part
                state_ = parser_state::part_begin;
@@ -239,25 +242,23 @@ namespace spider2
          return false;
       }
 
-      template <size_t N>
-      static auto if_value_advance(iterator_type &it, char value[N]) -> bool
+
+      auto advance_if_equals(iterator_type &it, std::string_view value) const -> bool
       {
-         if (std::equal(it, it + (N - 1), value))
+         static_assert(std::is_same_v<iterator_type::value_type, std::byte>);
+         if (const auto len = gsl::narrow_cast<int>(value.size());
+            std::equal(&*it, (&*it) + len, reinterpret_cast<const std::byte *>(value.data())))
          {
-            it += (N - 1);
+            it += len;
             return true;
          }
+
          return false;
       }
 
       auto if_boundary_advance(iterator_type &it) const -> bool
       {
-         if (std::equal(it, it + boundary_.size(), boundary_.begin()))
-         {
-            it += boundary_.size();
-            return true;
-         }
-         return false;
+         return advance_if_equals(it, boundary_);
       }
    };
 } // namespace spider2

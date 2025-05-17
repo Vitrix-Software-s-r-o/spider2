@@ -6,4 +6,3 @@ services:
     build:
       context: ../..
       dockerfile: ./containers/spider2-build/Dockerfile
-
