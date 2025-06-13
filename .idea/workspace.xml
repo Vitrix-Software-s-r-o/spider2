@@ -34,17 +34,8 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="be3eeae5-261a-4b63-bbfd-9b0773d6eb3c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/editor.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/editor.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/prettier.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/spider2.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/spider2.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/containers/spider2-build/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/containers/spider2-build/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/containers/spider2-build/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/containers/spider2-build/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spider2/include/spider2/types/utils/multipart_message_parser.h" beforeDir="false" afterPath="$PROJECT_DIR$/spider2/include/spider2/types/utils/multipart_message_parser.h" afterDir="false" />
+    <list default="true" id="be3eeae5-261a-4b63-bbfd-9b0773d6eb3c" name="Changes" comment="parsing simple multipart message">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spider2/tests/multipart_parser_tests.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/spider2/tests/multipart_parser_tests.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -60,23 +51,6 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///dummy.cpp" root0="SKIP_HIGHLIGHTING" />
@@ -99,6 +73,7 @@
   "keyToString": {
     "Catch.spider2-tests.executor": "Run",
     "Catch.test simple multipart_parser.executor": "Run",
+    "Catch.test two parts multipart_parser.executor": "Debug",
     "Docker.spider2-build.spider2-build: Compose Deployment.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.RadMigrateCodeStyle": "true",
@@ -121,7 +96,7 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Catch.test simple multipart_parser">
+  <component name="RunManager" selected="Catch.test two parts multipart_parser">
     <configuration name="spider2-api-tests" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-api-tests" CONFIG_NAME="Debug-gcc-14.2" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-api-tests" TEST_MODE="SUITE_TEST">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
@@ -146,9 +121,10 @@
         <option name="BeforeTestRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
+    <configuration name="test two parts multipart_parser" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-tests" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-tests" TEST_CLASS="[multipart_parser]" TEST_METHOD="test two parts multipart_parser" TEST_MODE="SUITE_TEST">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
       </method>
     </configuration>
     <configuration name="spider2-api" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-api" CONFIG_NAME="Debug-gcc-14.2">
@@ -198,7 +174,9 @@
       </method>
     </configuration>
     <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
-      <deployment type="docker-compose.yml" />
+      <deployment type="docker-compose.yml">
+        <settings />
+      </deployment>
       <method v="2" />
     </configuration>
     <configuration name="spider2-build.spider2-build: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
@@ -218,6 +196,7 @@
       <item itemvalue="Catch.spider2-api-tests" />
       <item itemvalue="Catch.spider2-prometheus-tests" />
       <item itemvalue="Catch.spider2-tests" />
+      <item itemvalue="Catch.test two parts multipart_parser" />
       <item itemvalue="Catch.test simple multipart_parser" />
       <item itemvalue="CMake Application.spider2" />
       <item itemvalue="CMake Application.spider2-api" />
@@ -232,6 +211,7 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Catch.test two parts multipart_parser" />
         <item itemvalue="Catch.test simple multipart_parser" />
         <item itemvalue="Docker.spider2-build.spider2-build: Compose Deployment" />
       </list>
@@ -245,8 +225,45 @@
       <option name="presentableId" value="Default" />
       <updated>1724582788303</updated>
       <workItem from="1747461032128" duration="5076000" />
-      <workItem from="1747470164214" duration="5608000" />
+      <workItem from="1747470164214" duration="8916000" />
+      <workItem from="1749029036267" duration="4000" />
+      <workItem from="1749758839471" duration="4709000" />
+      <workItem from="1749798981581" duration="3000" />
+      <workItem from="1749845568985" duration="540000" />
     </task>
+    <task id="LOCAL-00001" summary="working gcc 15 under spider2-build:latest">
+      <option name="closed" value="true" />
+      <created>1747479573642</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1747479573642</updated>
+    </task>
+    <task id="LOCAL-00002" summary="workspace">
+      <option name="closed" value="true" />
+      <created>1747479587666</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1747479587666</updated>
+    </task>
+    <task id="LOCAL-00003" summary="fixed API testing (early return from read body)">
+      <option name="closed" value="true" />
+      <created>1747490479039</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1747490479039</updated>
+    </task>
+    <task id="LOCAL-00004" summary="parsing simple multipart message">
+      <option name="closed" value="true" />
+      <created>1749797820113</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1749797820113</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -257,18 +274,36 @@
     <isAutomaticFoundErrors value="true" />
     <isAutomaticReloadCMake value="true" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="working gcc 15 under spider2-build:latest" />
+    <MESSAGE value="workspace" />
+    <MESSAGE value="fixed API testing (early return from read body)" />
+    <MESSAGE value="parsing simple multipart message" />
+    <option name="LAST_COMMIT_MESSAGE" value="parsing simple multipart message" />
+  </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/spider2/tests/multipart_parser_tests.cpp</url>
-          <line>52</line>
-          <option name="timeStamp" value="1" />
+          <url>file://$PROJECT_DIR$/spider2/include/spider2/types/structs/request.h</url>
+          <line>437</line>
+          <option name="timeStamp" value="12" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/spider2/tests/multipart_parser_tests.cpp</url>
-          <line>49</line>
-          <option name="timeStamp" value="2" />
+          <url>file://$PROJECT_DIR$/spider2/include/spider2/routing/api_endpoint/read_api_request.h</url>
+          <line>25</line>
+          <option name="timeStamp" value="14" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
