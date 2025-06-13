@@ -2,6 +2,7 @@
 #include "../platform.h"
 #include "spider2/types/structs/request_error_code.h"
 
+#include <iostream>
 #include <ranges>
 #include <fmt/base.h>
 #include <utility>
@@ -87,7 +88,8 @@ namespace spider2
 
          for (; it != end;)
          {
-            const bool need_more_data = [&]()
+            auto current_unprocessed = std::string {reinterpret_cast<const char*>(&*it), gsl::narrow_cast<std::size_t>(std::distance(it, end))};
+            const bool need_more_data = [this](auto &it, auto const & end, error_code &ec) -> bool
             {
                switch (state_)
                {
@@ -101,7 +103,7 @@ namespace spider2
                   ec = make_error_code(request_error_code::body_read_error);
                   return false;
                }
-            }();
+            }(it, end, ec);
 
             if (ec)
             {
@@ -124,28 +126,38 @@ namespace spider2
 
       auto on_part_begin(iterator_type &it, iterator_type end, error_code &ec) -> bool
       {
-         for (it = std::find(it, end, std::byte{'\r'}); it != end; it = std::find(it + 1, end, std::byte{'\r'}))
+         for (auto search_it = std::find(it, end, std::byte{'\r'});
+            search_it != end; search_it = std::find(it + 1, end, std::byte{'\r'}))
          {
-            auto search_it = it;
             if (advance_if_equals(search_it, "\r\n\r\n"))
             {
+               auto str = std::string(reinterpret_cast<const char*>(&*it), gsl::narrow_cast<std::size_t>(std::distance(it, search_it)));
+
                auto part_header_parser = http::request_parser<http::empty_body>{};
                part_header_parser.header_limit(max_part_header_size);
+
+               constexpr std::string_view fake_request_line = "GET / HTTP/1.1\r\n";
+               part_header_parser.put(net::const_buffer{fake_request_line.data(), fake_request_line.size()}, ec);
                part_header_parser.put(
-                  net::const_buffer{buffer_.data(), gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+                  net::const_buffer{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+               part_header_parser.put_eof(ec);
+
 
                if (!ec)
                {
                   handler_.on_part_begin(part_header_parser.release(), ec);
                   // I found the beginning of a part
                   state_ = parser_state::part_data;
+
+                  // all up to end of the header is processed
                   it = search_it;
                   return false;
                }
             }
          }
-         ec = make_error_code(request_error_code::header_read_error);
-         return false;
+
+         //need more input
+         return true;
       }
 
       auto on_part_data(iterator_type &it, iterator_type end, error_code &ec) -> bool
@@ -195,10 +207,10 @@ namespace spider2
       {
          if (auto p_it = std::find(it, end, std::byte{'-'}); p_it != end)
          {
-            if (this->on_possible_boundary(p_it, end, ec))
+            if (!this->on_possible_boundary(p_it, end, ec))
             {
                it = p_it;
-               return true;
+               return false;
             }
          }
          return true;
