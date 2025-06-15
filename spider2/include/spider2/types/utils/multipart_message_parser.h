@@ -37,7 +37,15 @@ namespace spider2
          for (std::size_t consumed = 0; consumed < data.size();)
          {
             const auto remaining = std::min(buffer_.capacity() - buffer_.size(), data.size());
-            std::copy_n(data.begin(), remaining, std::back_inserter(buffer_));
+            auto data_it = data.begin();
+            std::advance(data_it, consumed);
+
+            if (data_it == data.end())
+            {
+               break;
+            }
+
+            std::copy_n(data_it, remaining, std::back_inserter(buffer_));
 
             if (buffer_.size() == buffer_.capacity())
             {
@@ -67,7 +75,8 @@ namespace spider2
          preamble,
          part_begin,
          part_data,
-         end
+         end,
+         at_boundary
       };
 
       using iterator_type = std::vector<std::byte>::const_iterator;
@@ -99,6 +108,8 @@ namespace spider2
                   return on_part_begin(it, end, ec);
                case parser_state::part_data:
                   return on_part_data(it, end, ec);
+               case parser_state::at_boundary:
+                  return on_at_boundary(it, end, ec);
                default:
                   ec = make_error_code(request_error_code::body_read_error);
                   return false;
@@ -174,24 +185,34 @@ namespace spider2
             }
          };
 
-         bool needs_more_data = false;
-         for (search_it = std::find(search_it, end, std::byte{'-'}); search_it != end && !ec && !needs_more_data;
+         for (search_it = std::find(search_it, end, std::byte{'-'}); search_it != end && !ec;
               search_it = std::find(search_it + 1, end, std::byte{'-'}))
          {
             auto boundary_it = search_it;
-            needs_more_data = this->on_possible_boundary(boundary_it, end, ec);
-            flush_part();
-
-            if (state_ != parser_state::part_data)
+            if (this->on_possible_boundary(boundary_it, end, ec))
             {
+               // we need more data to determine if this is a boundary
+               flush_part();
+               return true;
+            }
+
+            if (state_ == parser_state::at_boundary)
+            {
+               // flushing the part data
+               // search_it points to the first character of the boundary
+               flush_part();
+
                handler_.on_part_end(ec);
+
+               // advance the iterator to the end of the boundary
                it = boundary_it;
                return false;
             }
          }
 
+         // if we reached the end of the buffer, we need more data
          flush_part();
-         return false;
+         return true;
       }
 
       auto buffer_to_front(iterator_type it, iterator_type end) noexcept
@@ -224,34 +245,46 @@ namespace spider2
       /// @return true if more data is needed
       auto on_possible_boundary(iterator_type &it, const iterator_type &end, error_code &ec) -> bool
       {
-         if (std::distance(it, end) < boundary_.size() + 6 /* --boundary(--)\r\n*/)
+         if (std::distance(it, end) < boundary_.size() + 2 /* --boundary */)
          {
             return true;
          }
 
          if (advance_if_equals(it, "--") && if_boundary_advance(it))
          {
-            // I found a boundary
-            if (advance_if_equals(it, "--"))
-            {
-               // I found the end of the message
-               state_ = parser_state::end;
-               return false;
-            }
-            else if (advance_if_equals(it, "\r\n"))
-            {
-               // I found the beginning of a part
-               state_ = parser_state::part_begin;
-               return false;
-            }
-            else
-            {
-               ec = make_error_code(request_error_code::body_read_error);
-            }
+            state_ = parser_state::at_boundary;
+            return false;
          }
 
          ++it;
          return false;
+      }
+
+      auto on_at_boundary(iterator_type &it, const iterator_type &end, error_code &ec) -> bool
+      {
+         if (std::distance(it, end) < 2)
+         {
+            return true;
+         }
+
+         // I found a boundary
+         if (advance_if_equals(it, "--"))
+         {
+            // I found the end of the message
+            state_ = parser_state::end;
+            return false;
+         }
+         else if (advance_if_equals(it, "\r\n"))
+         {
+            // I found the beginning of a part
+            state_ = parser_state::part_begin;
+            return false;
+         }
+         else
+         {
+            // there must be either "--" or "\r\n" after the boundary
+            ec = make_error_code(request_error_code::body_read_error);
+         }
       }
 
 
