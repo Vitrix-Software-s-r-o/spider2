@@ -1,6 +1,6 @@
-FROM gcc:15.1.0 AS spider2-vckpg-download
+FROM gcc:15.2.0 AS spider2-vckpg-download
 
-RUN git clone https://github.com/microsoft/vcpkg.git --depth 1 /vcpkg-master
+RUN git clone https://github.com/microsoft/vcpkg.git --depth 1 --branch master /vcpkg-master
 WORKDIR "/vcpkg-master"
 RUN git fetch --unshallow && git pull
 
