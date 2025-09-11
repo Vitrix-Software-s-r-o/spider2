@@ -186,7 +186,7 @@ int main(int argc, char **argv)
        begin_app() + on_scope("/api", make_dynamic_scope_test_api(state)) +
        on_scope("/", static_files(get_resources_directory(vm.count("debug") > 0), {.index_files = {"index.html"s}}));
 
-   auto bind_ip = io::ip::address::from_string(vm.at("host").as<string>());
+   auto bind_ip = io::ip::make_address(vm.at("host").as<string>());
    auto bind_port = vm.at("port").as<std::uint16_t>();
 
    std::cout << std::format("HTTP listening on {}:{}", bind_ip.to_string(), bind_port) << std::endl;

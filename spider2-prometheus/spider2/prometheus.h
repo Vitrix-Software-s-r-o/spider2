@@ -15,10 +15,7 @@ namespace spider2::prometheus
       constexpr static string_view type = "gauge";
       using value_type = std::int64_t;
 
-      inline gauge()
-         : value_ptr_(std::make_shared<std::atomic_int64_t>(0))
-      {
-      }
+      inline gauge() : value_ptr_(std::make_shared<std::atomic_int64_t>(0)) {}
 
       inline explicit operator std::int64_t() const
       {
@@ -57,20 +54,17 @@ namespace spider2::prometheus
          return increment_scope{value_ptr_, value};
       }
 
-   private:
+    private:
       shared_int_value_ptr value_ptr_;
    };
 
    struct counter
    {
-   public:
+    public:
       constexpr static string_view type = "counter";
       using value_type = std::int64_t;
 
-      inline counter()
-         : value_ptr_(std::make_shared<std::atomic_int64_t>(0))
-      {
-      }
+      inline counter() : value_ptr_(std::make_shared<std::atomic_int64_t>(0)) {}
 
       inline explicit operator std::int64_t() const
       {
@@ -82,7 +76,7 @@ namespace spider2::prometheus
          return value_ptr_->operator+=(static_cast<std::int64_t>(value));
       }
 
-   private:
+    private:
       shared_int_value_ptr value_ptr_;
    };
 
@@ -162,8 +156,7 @@ namespace spider2::prometheus
 
       mutable std::mutex mutex_;
 
-      explicit protected_histogram_value(vector<T> buckets, bool include_sum)
-         : histogram_value<T>{std::move(buckets)}
+      explicit protected_histogram_value(vector<T> buckets, bool include_sum) : histogram_value<T>{std::move(buckets)}
       {
          this->buckets_counts_.resize(this->buckets_.size());
          if (include_sum)
@@ -202,12 +195,12 @@ namespace spider2::prometheus
    template <class T>
    struct histogram
    {
-   public:
+    public:
       constexpr static string_view type = "histogram";
       using value_type = histogram_value<T>;
 
       inline explicit histogram(vector<T> buckets, bool include_sum = false)
-         : value_ptr_(std::make_shared<protected_histogram_value<T>>(std::move(buckets), include_sum))
+          : value_ptr_(std::make_shared<protected_histogram_value<T>>(std::move(buckets), include_sum))
       {
       }
 
@@ -224,11 +217,11 @@ namespace spider2::prometheus
          value_ptr_->observe(value, count);
       }
 
-   private:
+    private:
       std::shared_ptr<protected_histogram_value<T>> value_ptr_;
    };
 
-   using metrics_type = std::variant<gauge, counter, histogram<std::int64_t>, histogram<double>>;
+   using metrics_type = std::variant<gauge, counter, histogram<std::int64_t>, histogram<double>, labeled_counter>;
 
    struct metrics_label
    {
@@ -239,12 +232,12 @@ namespace spider2::prometheus
 
    class metrics_manager
    {
-   public:
+    public:
       metrics_manager();
       ~metrics_manager();
 
       template <class T, class... Args>
-      T create(metrics_label label, Args &&... args)
+      T create(metrics_label label, Args &&...args)
       {
          std::lock_guard lk{mutex_};
          metrics_.push_back(T{std::forward<std::decay_t<Args>>(args)...});
@@ -257,7 +250,7 @@ namespace spider2::prometheus
 
       string format_metrics() const;
 
-   private:
+    private:
       mutable std::mutex mutex_;
       std::deque<metrics_type> metrics_;
       std::vector<metrics_label> labels_;
@@ -269,9 +262,7 @@ namespace spider2::prometheus
       return [&](request &req) -> await_response
       {
          return [](metrics_manager const &manager) -> await_response
-         {
-            co_return response::return_string(http::status::ok, manager.format_metrics(), "text/plain");
-         }(manager);
+         { co_return response::return_string(http::status::ok, manager.format_metrics(), "text/plain"); }(manager);
       };
    };
 

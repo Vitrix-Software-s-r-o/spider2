@@ -71,7 +71,7 @@ int main(int argc, char **argv)
       return 1;
    }
 
-   auto bind_ip = io::ip::address::from_string(vm.at("host").as<string>());
+   auto bind_ip = io::ip::make_address(vm.at("host").as<string>());
    auto bind_port = vm.at("port").as<std::uint16_t>();
 
    // you want to compose your app using the `begin_app` function
