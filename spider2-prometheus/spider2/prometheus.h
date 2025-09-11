@@ -86,6 +86,65 @@ namespace spider2::prometheus
       shared_int_value_ptr value_ptr_;
    };
 
+   struct labeled_counter
+   {
+      struct state
+      {
+         std::mutex mutex_;
+         string label_name;
+         boost::unordered_map<string, std::shared_ptr<counter>> values_ = {};
+      };
+
+      std::shared_ptr<state> state_;
+      explicit labeled_counter(std::string label_name) : state_(std::make_shared<state>())
+      {
+         state_->label_name = std::move(label_name);
+      }
+
+      labeled_counter(const labeled_counter &) = default;
+      labeled_counter(labeled_counter &&) = default;
+
+      inline std::shared_ptr<counter> operator[](string const &label_value)
+      {
+         auto &self = *state_;
+         auto lk = std::lock_guard{self.mutex_};
+         auto result = std::shared_ptr<counter>{};
+         if (const auto it = self.values_.find(label_value); it != self.values_.end())
+         {
+            result = it->second;
+         }
+         else
+         {
+            self.values_[label_value] = result = std::make_shared<counter>();
+         }
+
+         return result;
+      }
+
+      inline auto increment_with_label(string const &label_value, std::int64_t value = 1) -> std::int64_t
+      {
+         return (*this)[label_value]->increment(value);
+      }
+
+      inline auto collect() const -> std::pair<std::string, std::vector<std::pair<std::string, std::int64_t>>>
+      {
+         auto &self = *state_;
+         auto values = std::vector<std::pair<std::string, std::int64_t>>{};
+
+         {
+            auto lk = std::lock_guard{self.mutex_};
+            values.reserve(self.values_.size());
+
+            for (auto const &[label_value, counter_ptr] : self.values_)
+            {
+               values.emplace_back(label_value, static_cast<std::int64_t>(*counter_ptr));
+            }
+         }
+         std::ranges::sort(values, [](auto const &a, auto const &b) { return a.first < b.first; });
+         return {self.label_name, std::move(values)};
+      }
+   };
+
    template <class T>
    struct histogram_value
    {
@@ -188,17 +247,11 @@ namespace spider2::prometheus
       T create(metrics_label label, Args &&... args)
       {
          std::lock_guard lk{mutex_};
-         metrics_.push_back(T{std::forward<Args>(args)...});
+         metrics_.push_back(T{std::forward<std::decay_t<Args>>(args)...});
          labels_.push_back(label);
 
-         return std::visit(overload{[](T &val) -> T
-                                    {
-                                       return val;
-                                    },
-                                    [](auto &) -> T
-                                    {
-                                       throw std::logic_error{"this cannot happen"};
-                                    }},
+         return std::visit(overload{[](T &val) -> T { return val; },
+                                    [](auto &) -> T { throw std::logic_error{"this cannot happen"}; }},
                            metrics_.back());
       }
 
