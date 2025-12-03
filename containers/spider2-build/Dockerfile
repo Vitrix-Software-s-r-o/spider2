@@ -21,10 +21,29 @@ ADD vcpkg.json /vcpkg-master/vcpkg.json
 #--overlay-ports=/vcpkg-master/overlays
 RUN ./vcpkg install
 
-ADD https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip /tools/ninja-1.12.1.zip
-RUN unzip /tools/ninja-1.12.1.zip -d /tools/ninja
+RUN mkdir "/tools"
+# Download architecture-specific tools based on platform
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        CMAKE_ARCH="x86_64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        CMAKE_ARCH="aarch64"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    curl -L https://github.com/Kitware/CMake/releases/download/v4.2.0/cmake-4.2.0-linux-${CMAKE_ARCH}.tar.gz -o /tools/cmake-4.2.0-linux-${CMAKE_ARCH}.tar.gz && \
+    tar -xzf /tools/cmake-4.2.0-linux-${CMAKE_ARCH}.tar.gz -C /tools/ && \
+    ln -s /tools/cmake-4.2.0-linux-${CMAKE_ARCH} /tools/cmake
 
-ADD https://github.com/Kitware/CMake/releases/download/v4.0.2/cmake-4.0.2-linux-x86_64.tar.gz /tools/cmake-4.0.2-linux-x86_64.tar.gz
-RUN tar -xzf /tools/cmake-4.0.2-linux-x86_64.tar.gz -C /tools/
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        NINJA_FILE="ninja-linux.zip"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        NINJA_FILE="ninja-linux-aarch64.zip"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    curl -L https://github.com/ninja-build/ninja/releases/download/v1.13.1/${NINJA_FILE} -o /tools/ninja.zip && \
+    unzip /tools/ninja.zip -d /tools/ninja
 
-ENV PATH="/tools/ninja:/tools/:/tools/cmake-4.0.2-linux-x86_64/bin:$PATH"
+ENV PATH="/tools/ninja:/tools/:/tools/cmake/bin:$PATH"
