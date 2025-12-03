@@ -284,6 +284,7 @@ namespace spider2
          {
             // there must be either "--" or "\r\n" after the boundary
             ec = make_error_code(request_error_code::body_read_error);
+            return false;
          }
       }
 
@@ -303,7 +304,20 @@ namespace spider2
 
       auto if_boundary_advance(iterator_type &it) const -> bool
       {
-         return advance_if_equals(it, boundary_);
+         iterator_type boundary_it = it;
+         if (advance_if_equals(boundary_it, boundary_)) {
+            iterator_type after_boundary_it = boundary_it;
+            if (advance_if_equals(after_boundary_it, "--")) {
+               it = boundary_it;
+               return true;
+            }
+            else if (advance_if_equals(after_boundary_it, "\r\n")) {
+               it = boundary_it;
+               return true;
+            }
+         }
+
+         return false;
       }
    };
 } // namespace spider2
