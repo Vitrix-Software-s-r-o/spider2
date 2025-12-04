@@ -263,6 +263,7 @@ TEST_CASE("test multipart_parser - invalid boundary termination", "[multipart_pa
    // Should complete without error as "--boundaryXX" is not recognized as boundary
    REQUIRE(handler.parts.size() == 1);
    REQUIRE(handler.parts[0].second.find("--boundaryXX") != std::string::npos);
+   REQUIRE(ec);
 }
 
 TEST_CASE("test multipart_parser - malformed part after valid boundary", "[multipart_parser][failure]")
