@@ -480,3 +480,35 @@ TEST_CASE("test multipart_parser - multiple consecutive boundaries", "[multipart
    REQUIRE(handler.parts[0].second.empty());
    REQUIRE(handler.parts[1].second.empty());
 }
+
+TEST_CASE("test multipart_parser - body part with no headers", "[multipart_parser]")
+{
+   auto handler = test_message_handler{};
+   auto parser = multipart_message_parser{"boundary", handler};
+
+   // Per RFC 2046: "NO header fields are actually required in body parts.
+   // A body part that starts with a blank line is allowed."
+   // The boundary is followed by two CRLFs (no headers, just blank line before body)
+   std::string_view data =
+      "--boundary\r\n"
+      "\r\n"
+      "Plain text data without headers\r\n"
+      "--boundary\r\n"
+      "Content-Disposition: form-data; name=\"file2\"\r\n"
+      "\r\n"
+      "Data with headers\r\n"
+      "--boundary--\r\n";
+
+   error_code ec;
+   parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
+   REQUIRE(!ec);
+   REQUIRE(handler.parts_count == 2);
+   REQUIRE(handler.parts.size() == 2);
+   // First part has no headers, should default to text/plain
+   REQUIRE(handler.parts[0].second == "Plain text data without headers\r\n");
+   // Second part has headers
+   REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"");
+   REQUIRE(handler.parts[1].second == "Data with headers\r\n");
+}
