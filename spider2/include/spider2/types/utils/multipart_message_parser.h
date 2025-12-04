@@ -66,6 +66,11 @@ namespace spider2
          if (!buffer_.empty() && state_ != parser_state::end)
          {
             on_process_buffer(ec);
+
+            if (state_ != parser_state::end && !ec)
+            {
+               ec = make_error_code(request_error_code::body_read_error);
+            }
          }
       }
 

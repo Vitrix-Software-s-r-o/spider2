@@ -452,6 +452,8 @@ TEST_CASE("test multipart_parser - boundary not followed by required chars", "[m
 
    // Since "--boundaryINVALID" is not a valid boundary, it should be treated as data
    REQUIRE(handler.parts.size() == 1);
+   REQUIRE(handler.parts[0].second == "Hello World--boundaryINVALID");
+   REQUIRE(ec);
 }
 
 TEST_CASE("test multipart_parser - multiple consecutive boundaries", "[multipart_parser][failure]")
