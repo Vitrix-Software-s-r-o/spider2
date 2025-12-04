@@ -34,9 +34,15 @@ namespace spider2
 
       void on_data(std::span<const std::byte> data, error_code &ec)
       {
-         for (std::size_t consumed = 0; consumed < data.size();)
+         for (std::size_t consumed = 0; consumed < data.size() && !ec;)
          {
             const auto remaining = std::min(buffer_.capacity() - buffer_.size(), data.size());
+            if (remaining == 0)
+            {
+               ec = make_error_code(request_error_code::body_read_error);
+               break;
+            }
+
             auto data_it = data.begin();
             std::advance(data_it, consumed);
 
@@ -130,6 +136,10 @@ namespace spider2
             if (need_more_data)
             {
                buffer_to_front(it, end);
+               if (buffer_.size() == buffer_.capacity()) {
+                  ec = make_error_code(request_error_code::body_read_error);
+                  handler_.on_finish(ec);
+               }
                break;
             }
          }
