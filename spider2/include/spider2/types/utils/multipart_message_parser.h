@@ -153,7 +153,7 @@ namespace spider2
       auto on_part_begin(iterator_type &it, iterator_type end, error_code &ec) -> bool
       {
          for (auto search_it = std::find(it, end, std::byte{'\r'});
-            search_it != end; search_it = std::find(it + 1, end, std::byte{'\r'}))
+            search_it != end; search_it = std::find(search_it + 1, end, std::byte{'\r'}))
          {
             if (advance_if_equals(search_it, "\r\n\r\n"))
             {
