@@ -163,17 +163,17 @@ namespace spider2
                   net::const_buffer{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
                part_header_parser.put_eof(ec);
 
-
-               if (!ec)
-               {
-                  handler_.on_part_begin(part_header_parser.release(), ec);
-                  // I found the beginning of a part
-                  state_ = parser_state::part_data;
-
-                  // all up to end of the header is processed
-                  it = search_it;
+               if (ec) {
                   return false;
                }
+
+               handler_.on_part_begin(part_header_parser.release(), ec);
+               // I found the beginning of a part
+               state_ = parser_state::part_data;
+
+               // all up to end of the header is processed
+               it = search_it;
+               return false;
             }
          }
 
