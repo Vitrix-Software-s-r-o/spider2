@@ -152,6 +152,17 @@ namespace spider2
 
       auto on_part_begin(iterator_type &it, iterator_type end, error_code &ec) -> bool
       {
+         // RFC 2046: "NO header fields are actually required in body parts."
+         // Check if we have an immediate CRLF (no headers case)
+         if (advance_if_equals(it, "\r\n"))
+         {
+            // No headers, create empty headers and transition to part_data
+            handler_.on_part_begin(http::fields{}, ec);
+            state_ = parser_state::part_data;
+            return false;
+         }
+
+         // Look for headers terminated by \r\n\r\n
          for (auto search_it = std::find(it, end, std::byte{'\r'});
             search_it != end; search_it = std::find(search_it + 1, end, std::byte{'\r'}))
          {
