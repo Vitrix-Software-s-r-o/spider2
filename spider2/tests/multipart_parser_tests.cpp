@@ -515,3 +515,147 @@ TEST_CASE("test multipart_parser - body part with no headers", "[multipart_parse
    REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"");
    REQUIRE(handler.parts[1].second == "Data with headers\r\n");
 }
+
+TEST_CASE("test multipart_parser - boundary in middle of line should not be recognized", "[multipart_parser][flaw]")
+{
+   auto handler = test_message_handler{};
+   auto parser = multipart_message_parser{"boundary", handler};
+
+   // Per RFC 2046: boundary must occur at the beginning of a line (after CRLF)
+   // A boundary without preceding CRLF should be treated as regular data
+   std::string_view data =
+      "--boundary\r\n"
+      "Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
+      "\r\n"
+      "This line contains --boundary in the middle\r\n"
+      "--boundary--\r\n";
+
+   error_code ec;
+   parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
+   REQUIRE(!ec);
+   REQUIRE(handler.parts_count == 1);
+   REQUIRE(handler.parts.size() == 1);
+   // The "--boundary" in the middle of the line should be part of the data
+   REQUIRE(handler.parts[0].second == "This line contains --boundary in the middle\r\n");
+}
+
+TEST_CASE("test multipart_parser - boundary at start of line without CRLF prefix", "[multipart_parser][flaw]")
+{
+   auto handler = test_message_handler{};
+   auto parser = multipart_message_parser{"boundary", handler};
+
+   // Boundary at the start of a line but not the first boundary (missing CRLF before it)
+   std::string_view data =
+      "--boundary\r\n"
+      "Content-Disposition: form-data; name=\"file\"\r\n"
+      "\r\n"
+      "Line1\r\n"
+      "--boundary\r\n"  // This IS preceded by CRLF, so it should work
+      "Content-Disposition: form-data; name=\"file2\"\r\n"
+      "\r\n"
+      "Line2\r\n"
+      "--boundary--\r\n";
+
+   error_code ec;
+   parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
+   REQUIRE(!ec);
+   REQUIRE(handler.parts_count == 2);
+   REQUIRE(handler.parts.size() == 2);
+}
+
+TEST_CASE("test multipart_parser - data without preceding CRLF to boundary", "[multipart_parser][flaw]")
+{
+   auto handler = test_message_handler{};
+   auto parser = multipart_message_parser{"boundary", handler};
+
+   // Part data that ends without CRLF before the boundary
+   // Per RFC 2046: CRLF before boundary is conceptually part of the boundary
+   std::string_view data =
+      "--boundary\r\n"
+      "Content-Disposition: form-data; name=\"file\"\r\n"
+      "\r\n"
+      "Data without trailing CRLF"
+      "--boundary--\r\n";  // Missing \r\n before this boundary
+
+   error_code ec;
+   parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
+   // This should fail because the boundary isn't preceded by CRLF
+   // The data contains "Data without trailing CRLF--boundary--"
+   REQUIRE(handler.parts.size() == 1);
+   REQUIRE(handler.parts[0].second.find("--boundary--") != std::string::npos);
+}
+
+TEST_CASE("test multipart_parser - very long boundary name", "[multipart_parser][flaw]")
+{
+   auto handler = test_message_handler{};
+   
+   // RFC 2046: boundary must be 0-70 characters (effectively 1-70 since 0 is useless)
+   std::string long_boundary(71, 'x');
+   auto parser = multipart_message_parser{long_boundary, handler};
+
+   std::string data = "--" + long_boundary + "\r\n"
+      "Content-Disposition: form-data; name=\"file\"\r\n"
+      "\r\n"
+      "Test\r\n"
+      "--" + long_boundary + "--\r\n";
+
+   error_code ec;
+   parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
+   // Parser should handle this even though boundary is too long per RFC
+   // (This is a leniency test - strict parsers might reject it)
+}
+
+TEST_CASE("test multipart_parser - boundary with trailing whitespace", "[multipart_parser][flaw]")
+{
+   auto handler = test_message_handler{};
+   
+   // RFC 2046: boundary must NOT end with whitespace
+   std::string boundary_with_space = "boundary ";
+   auto parser = multipart_message_parser{boundary_with_space, handler};
+
+   std::string data = "--boundary \r\n"
+      "Content-Disposition: form-data; name=\"file\"\r\n"
+      "\r\n"
+      "Test\r\n"
+      "--boundary --\r\n";
+
+   error_code ec;
+   parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(data.data()), data.size()}, ec);
+   parser.on_finish(ec);
+
+   // This tests if parser handles boundaries with trailing spaces
+   // RFC says they should not be used but implementations may be lenient
+}
+
+TEST_CASE("test multipart_parser - buffer size exactly at boundary", "[multipart_parser][flaw]")
+{
+   auto handler = test_message_handler{};
+   auto parser = multipart_message_parser{"boundary", handler};
+
+   // Test edge case where buffer fills up exactly at a critical point
+   std::string_view data =
+      "--boundary\r\n"
+      "Content-Disposition: form-data; name=\"file\"\r\n"
+      "\r\n"
+      "Test\r\n"
+      "--boundary--\r\n";
+
+   error_code ec;
+   // Feed data byte by byte to test buffer boundary conditions
+   for (size_t i = 0; i < data.size() && !ec; ++i)
+   {
+      parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(&data[i]), 1}, ec);
+   }
+   parser.on_finish(ec);
+
+   REQUIRE(!ec);
+   REQUIRE(handler.parts_count == 1);
+}
