@@ -150,8 +150,9 @@ namespace spider2
       void disconnect_on_error()
       {
          boost::system::error_code ec;
-         socket_->shutdown(boost::asio::socket_base::shutdown_both, ec);
-         socket_->close(ec);
+         ec = socket_->shutdown(boost::asio::socket_base::shutdown_both, ec);
+         ec = socket_->close(ec);
+         static_cast<void>(ec);
       }
 
       [[nodiscard]]
