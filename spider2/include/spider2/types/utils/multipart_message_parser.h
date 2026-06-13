@@ -2,17 +2,16 @@
 #include "../platform.h"
 #include "spider2/types/structs/request_error_code.h"
 
+#include <fmt/base.h>
 #include <iostream>
 #include <ranges>
-#include <fmt/base.h>
 #include <utility>
 
 namespace spider2
 {
 
    template <class T>
-   concept multipart_event_handler = requires(T t)
-   {
+   concept multipart_event_handler = requires(T t) {
       t.on_part_begin(std::declval<http::fields>(), std::declval<error_code &>());
       t.on_part_data(std::declval<std::span<const std::byte>>(), std::declval<error_code &>());
       t.on_part_end(std::declval<error_code &>());
@@ -22,11 +21,11 @@ namespace spider2
    template <multipart_event_handler EventHandlerT>
    class multipart_message_parser
    {
-   public:
+    public:
       constexpr static std::size_t max_part_header_size = 8096;
 
       explicit multipart_message_parser(std::string_view boundary, EventHandlerT &handler)
-         : boundary_(boundary), handler_(handler)
+          : boundary_(boundary), handler_(handler)
       {
          buffer_.reserve(max_part_header_size);
          temp_buffer_.reserve(max_part_header_size);
@@ -74,13 +73,7 @@ namespace spider2
          }
       }
 
-      [[nodiscard]]
-      auto get_processed_size() const -> std::size_t
-      {
-         return processed_;
-      }
-
-   private:
+    private:
       enum class parser_state
       {
          preamble,
@@ -98,7 +91,6 @@ namespace spider2
       std::vector<std::byte> buffer_;
       std::vector<std::byte> temp_buffer_;
 
-      std::size_t processed_ = 0;
       EventHandlerT &handler_;
 
       void on_process_buffer(error_code &ec)
@@ -108,8 +100,9 @@ namespace spider2
 
          for (; it != end;)
          {
-            auto current_unprocessed = std::string {reinterpret_cast<const char*>(&*it), gsl::narrow_cast<std::size_t>(std::distance(it, end))};
-            const bool need_more_data = [this](auto &it, auto const & end, error_code &ec) -> bool
+            auto current_unprocessed = std::string{reinterpret_cast<const char *>(&*it),
+                                                   gsl::narrow_cast<std::size_t>(std::distance(it, end))};
+            const bool need_more_data = [this](auto &it, auto const &end, error_code &ec) -> bool
             {
                switch (state_)
                {
@@ -141,7 +134,8 @@ namespace spider2
             if (need_more_data)
             {
                buffer_to_front(it, end);
-               if (buffer_.size() == buffer_.capacity()) {
+               if (buffer_.size() == buffer_.capacity())
+               {
                   ec = make_error_code(request_error_code::body_read_error);
                   handler_.on_finish(ec);
                }
@@ -163,12 +157,13 @@ namespace spider2
          }
 
          // Look for headers terminated by \r\n\r\n
-         for (auto search_it = std::find(it, end, std::byte{'\r'});
-            search_it != end; search_it = std::find(search_it + 1, end, std::byte{'\r'}))
+         for (auto search_it = std::find(it, end, std::byte{'\r'}); search_it != end;
+              search_it = std::find(search_it + 1, end, std::byte{'\r'}))
          {
             if (advance_if_equals(search_it, "\r\n\r\n"))
             {
-               auto str = std::string(reinterpret_cast<const char*>(&*it), gsl::narrow_cast<std::size_t>(std::distance(it, search_it)));
+               auto str = std::string(reinterpret_cast<const char *>(&*it),
+                                      gsl::narrow_cast<std::size_t>(std::distance(it, search_it)));
 
                auto part_header_parser = http::request_parser<http::empty_body>{};
                part_header_parser.header_limit(max_part_header_size);
@@ -176,10 +171,11 @@ namespace spider2
                constexpr std::string_view fake_request_line = "GET / HTTP/1.1\r\n";
                part_header_parser.put(net::const_buffer{fake_request_line.data(), fake_request_line.size()}, ec);
                part_header_parser.put(
-                  net::const_buffer{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+                   net::const_buffer{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
                part_header_parser.put_eof(ec);
 
-               if (ec) {
+               if (ec)
+               {
                   return false;
                }
 
@@ -193,26 +189,42 @@ namespace spider2
             }
          }
 
-         //need more input
+         // need more input
          return true;
       }
 
-      auto on_part_data(iterator_type &it, iterator_type end, error_code &ec) -> bool
+      auto on_part_data(iterator_type &it, const iterator_type end, error_code &ec) -> bool
       {
-         iterator_type search_it = it;
+         auto search_it = it;
 
          const auto flush_part = [&]()
          {
             if (it != search_it && !ec)
             {
                handler_.on_part_data(
-                  std::span<const std::byte>{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
+                   std::span<const std::byte>{&*it, gsl::narrow_cast<std::size_t>(std::distance(it, search_it))}, ec);
                it = search_it;
             }
          };
 
-         for (search_it = std::find(search_it, end, std::byte{'-'}); search_it != end && !ec;
-              search_it = std::find(search_it + 1, end, std::byte{'-'}))
+         const auto find_first_possibility_of_boundary = [&]()
+         {
+            if (search_it == end)
+            {
+               return search_it;
+            }
+
+            if (*search_it == std::byte{'-'})
+            {
+               // this is the case where we could immediately have a boundary after part headers
+               return search_it;
+            }
+
+            return std::find(search_it, end, std::byte{'\r'});
+         };
+
+         for (search_it = find_first_possibility_of_boundary(); search_it != end && !ec;
+              search_it = std::find(search_it + 1, end, std::byte{'\r'}))
          {
             auto boundary_it = search_it;
             if (this->on_possible_boundary(boundary_it, end, ec))
@@ -252,7 +264,7 @@ namespace spider2
       /// \returns true if more data is needed
       auto on_preamble(iterator_type &it, const iterator_type end, error_code &ec) -> bool
       {
-         if (auto p_it = std::find(it, end, std::byte{'-'}); p_it != end)
+         if (auto p_it = std::min(std::find(it, end, std::byte{'-'}), std::find(it, end, std::byte{'\r'})); p_it != end)
          {
             if (!this->on_possible_boundary(p_it, end, ec))
             {
@@ -264,16 +276,22 @@ namespace spider2
       }
 
       /// Called when a possible boundary is found.
-      /// --boundary--\r\n
+      /// \r\n--boundary--\r\n
       /// ^
       /// @param it - first character of the possible boundary
       /// @param end - end of the buffer
       /// @return true if more data is needed
       auto on_possible_boundary(iterator_type &it, const iterator_type &end, error_code &ec) -> bool
       {
-         if (std::distance(it, end) < boundary_.size() + 2 /* --boundary */)
+         if (std::distance(it, end) < boundary_.size() + 4 /* --boundary */)
          {
             return true;
+         }
+
+         if (advance_if_equals(it, "\r\n--") && if_boundary_advance(it))
+         {
+            state_ = parser_state::at_boundary;
+            return false;
          }
 
          if (advance_if_equals(it, "--") && if_boundary_advance(it))
@@ -314,12 +332,18 @@ namespace spider2
          }
       }
 
-
-      auto advance_if_equals(iterator_type &it, std::string_view value) const -> bool
+      /// This method advances the iterator by the length of the value if current
+      /// iterator points to the exact sequence of characters in the value.
+      ///
+      /// @param it - iterator to be advanced
+      /// @param value - value to be compared
+      /// @return true - if the @it contained sequence specified by value by its length and was advanced, false -
+      /// otherwise
+      static auto advance_if_equals(iterator_type &it, std::string_view value) -> bool
       {
          static_assert(std::is_same_v<iterator_type::value_type, std::byte>);
          if (const auto len = gsl::narrow_cast<int>(value.size());
-            std::equal(&*it, (&*it) + len, reinterpret_cast<const std::byte *>(value.data())))
+             std::equal(&*it, (&*it) + len, reinterpret_cast<const std::byte *>(value.data())))
          {
             it += len;
             return true;
@@ -328,16 +352,23 @@ namespace spider2
          return false;
       }
 
+      /// This method advances the iterator if it points to the boundary and checks if it is followed by either "--"
+      /// (end of message) or "\r\n" (beginning of part).
+      ///
+      /// @param it - iterator to be advanced
+      /// @return true - if the @it contained sequence specified by value by its length and was advanced, false -
+      /// otherwise
       auto if_boundary_advance(iterator_type &it) const -> bool
       {
-         iterator_type boundary_it = it;
-         if (advance_if_equals(boundary_it, boundary_)) {
-            iterator_type after_boundary_it = boundary_it;
-            if (advance_if_equals(after_boundary_it, "--")) {
+         if (auto boundary_it = it; advance_if_equals(boundary_it, boundary_))
+         {
+            if (auto after_boundary_it = boundary_it; advance_if_equals(after_boundary_it, "--"))
+            {
                it = boundary_it;
                return true;
             }
-            else if (advance_if_equals(after_boundary_it, "\r\n")) {
+            else if (advance_if_equals(after_boundary_it, "\r\n"))
+            {
                it = boundary_it;
                return true;
             }

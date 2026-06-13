@@ -54,7 +54,7 @@ TEST_CASE("test simple multipart_parser", "[multipart_parser]")
    REQUIRE(handler.parts_count == 1);
    REQUIRE(handler.parts.size() == 1);
    REQUIRE(handler.parts[0].first["Content-Disposition"] == "form-data; name=\"file\"; filename=\"test.txt\"");
-   REQUIRE(handler.parts[0].second == "Hello World\r\n");
+   REQUIRE(handler.parts[0].second == "Hello World");
 }
 
 TEST_CASE("test two parts multipart_parser", "[multipart_parser]")
@@ -66,7 +66,7 @@ TEST_CASE("test two parts multipart_parser", "[multipart_parser]")
       "--boundary\r\n"
       "Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
       "\r\n"
-      "Hello World"
+      "Hello World\r\n"
       "--boundary\r\n"
       "Content-Disposition: form-data; name=\"file2\"; filename=\"test2.txt\"\r\n"
       "\r\n"
@@ -84,7 +84,7 @@ TEST_CASE("test two parts multipart_parser", "[multipart_parser]")
    REQUIRE(handler.parts[0].first["Content-Disposition"] == "form-data; name=\"file\"; filename=\"test.txt\"");
    REQUIRE(handler.parts[0].second == "Hello World");
    REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"; filename=\"test2.txt\"");
-   REQUIRE(handler.parts[1].second == "Hello Again\r\n");
+   REQUIRE(handler.parts[1].second == "Hello Again");
 }
 
 TEST_CASE("test two parts multipart_parser - by single character", "[multipart_parser]")
@@ -96,7 +96,7 @@ TEST_CASE("test two parts multipart_parser - by single character", "[multipart_p
       "--boundary\r\n"
       "Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r\n"
       "\r\n"
-      "Hello World"
+      "Hello World\r\n"
       "--boundary\r\n"
       "Content-Disposition: form-data; name=\"file2\"; filename=\"test2.txt\"\r\n"
       "\r\n"
@@ -122,7 +122,7 @@ TEST_CASE("test two parts multipart_parser - by single character", "[multipart_p
    REQUIRE(handler.parts[0].first["Content-Disposition"] == "form-data; name=\"file\"; filename=\"test.txt\"");
    REQUIRE(handler.parts[0].second == "Hello World");
    REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"; filename=\"test2.txt\"");
-   REQUIRE(handler.parts[1].second == "Hello Again\r\n");
+   REQUIRE(handler.parts[1].second == "Hello Again");
 }
 
 TEST_CASE("test two parts multipart_parser - long body", "[multipart_parser]")
@@ -137,7 +137,7 @@ TEST_CASE("test two parts multipart_parser - long body", "[multipart_parser]")
    {
       data += static_cast<char>(i % 0xff);
    }
-   data += "Hello World"
+   data += "Hello World\r\n"
       "--boundary\r\n"
       "Content-Disposition: form-data; name=\"file2\"; filename=\"test2.txt\"\r\n"
       "\r\n"
@@ -174,7 +174,7 @@ TEST_CASE("test two parts multipart_parser - long body", "[multipart_parser]")
       REQUIRE(boost::ends_with(handler.parts[0].second, "Hello World"sv));
 
       REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"; filename=\"test2.txt\"");
-      REQUIRE(handler.parts[1].second == "Hello Again\r\n");
+      REQUIRE(handler.parts[1].second == "Hello Again");
    }
 
    {
@@ -200,7 +200,7 @@ TEST_CASE("test two parts multipart_parser - long body", "[multipart_parser]")
       REQUIRE(boost::ends_with(handler.parts[0].second, "Hello World"sv));
 
       REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"; filename=\"test2.txt\"");
-      REQUIRE(handler.parts[1].second == "Hello Again\r\n");
+      REQUIRE(handler.parts[1].second == "Hello Again");
    }
 
 }
@@ -371,7 +371,7 @@ TEST_CASE("test multipart_parser - boundary within part data", "[multipart_parse
    REQUIRE(!ec);
    REQUIRE(handler.parts_count == 1);
    REQUIRE(handler.parts.size() == 1);
-   REQUIRE(handler.parts[0].second == "This text contains boundary word\r\n");
+   REQUIRE(handler.parts[0].second == "This text contains boundary word");
 }
 
 TEST_CASE("test multipart_parser - missing CRLF after headers", "[multipart_parser][failure]")
@@ -510,10 +510,10 @@ TEST_CASE("test multipart_parser - body part with no headers", "[multipart_parse
    REQUIRE(handler.parts_count == 2);
    REQUIRE(handler.parts.size() == 2);
    // First part has no headers, should default to text/plain
-   REQUIRE(handler.parts[0].second == "Plain text data without headers\r\n");
+   REQUIRE(handler.parts[0].second == "Plain text data without headers");
    // Second part has headers
    REQUIRE(handler.parts[1].first["Content-Disposition"] == "form-data; name=\"file2\"");
-   REQUIRE(handler.parts[1].second == "Data with headers\r\n");
+   REQUIRE(handler.parts[1].second == "Data with headers");
 }
 
 TEST_CASE("test multipart_parser - boundary in middle of line should not be recognized", "[multipart_parser][flaw]")
@@ -538,7 +538,7 @@ TEST_CASE("test multipart_parser - boundary in middle of line should not be reco
    REQUIRE(handler.parts_count == 1);
    REQUIRE(handler.parts.size() == 1);
    // The "--boundary" in the middle of the line should be part of the data
-   REQUIRE(handler.parts[0].second == "This line contains --boundary in the middle\r\n");
+   REQUIRE(handler.parts[0].second == "This line contains --boundary in the middle");
 }
 
 TEST_CASE("test multipart_parser - boundary at start of line without CRLF prefix", "[multipart_parser][flaw]")
@@ -588,7 +588,8 @@ TEST_CASE("test multipart_parser - data without preceding CRLF to boundary", "[m
    // This should fail because the boundary isn't preceded by CRLF
    // The data contains "Data without trailing CRLF--boundary--"
    REQUIRE(handler.parts.size() == 1);
-   REQUIRE(handler.parts[0].second.find("--boundary--") != std::string::npos);
+   const auto pos = handler.parts[0].second.find("--boundary--");
+   REQUIRE( pos != std::string::npos);
 }
 
 TEST_CASE("test multipart_parser - very long boundary name", "[multipart_parser][flaw]")
