@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_hash.hpp>
@@ -35,8 +36,8 @@ namespace spider2::guid
       }
 
     private:
-      boost::mt19937 mt_;
-      boost::uuids::basic_random_generator<boost::mt19937> gen_;
+      boost::random::mt19937 mt_;
+      boost::uuids::basic_random_generator<boost::random::mt19937> gen_;
       std::mutex mutex_;
    };
 

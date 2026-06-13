@@ -4,8 +4,11 @@
 
 #pragma once
 
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 #include <stop_token>
 
 namespace spider2
@@ -76,9 +79,26 @@ namespace spider2
    class server_event_handler
    {
     public:
+      struct connection_event
+      {
+         enum class event
+         {
+            listening_started,
+            listening_stopped,
+            accept_error,
+            accepted_connection,
+            connection_closed
+         };
+         event event_type;
+         boost::asio::ip::tcp::endpoint accept_endpoint;
+         std::optional<std::string> error_message = std::nullopt;
+         std::optional<boost::asio::ip::tcp::endpoint> client_endpoint = std::nullopt;
+      };
       virtual ~server_event_handler() = default;
       virtual auto on_io_thread_exception(std::exception const *ex) noexcept -> void;
       virtual auto on_app_error(std::exception const *ex) noexcept -> void;
+
+      virtual auto on_connection_event(connection_event const &event) noexcept -> void;
    };
 
    struct app_context_base

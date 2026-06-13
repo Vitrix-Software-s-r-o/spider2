@@ -59,6 +59,11 @@ namespace spider2
 
       [[nodiscard]] inline auto steal_socket() noexcept -> tcp::socket;
 
+      [[nodiscard]] inline auto is_socket_stolen() const noexcept -> bool
+      {
+         return socket_ == nullptr;
+      }
+
       [[nodiscard]] inline auto read_header() noexcept -> io::awaitable<error_code>;
 
       template <class BodyT>

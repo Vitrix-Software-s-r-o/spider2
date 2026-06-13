@@ -86,16 +86,59 @@ namespace spider2
    {
       return timer_stop_callback{context, std::forward<T>(cancel_fun), duration, token};
    }
+   /// Open and configure a listening acceptor without throwing.
+   /// Returns a default-constructed acceptor and a populated error_code on failure.
+   inline auto try_open_acceptor(auto &executor, tcp::endpoint const &endpoint, boost::system::error_code &ec)
+       -> tcp::acceptor
+   {
+      auto acceptor = tcp::acceptor{executor};
+      acceptor.open(endpoint.protocol(), ec);
+      if (ec)
+      {
+         return acceptor;
+      }
+      acceptor.set_option(tcp::acceptor::reuse_address(true), ec);
+      if (ec)
+      {
+         return acceptor;
+      }
+      acceptor.bind(endpoint, ec);
+      if (ec)
+      {
+         return acceptor;
+      }
+      acceptor.listen(boost::asio::socket_base::max_listen_connections, ec);
+      return acceptor;
+   }
+
+   /// Accept a single connection on an already-opened acceptor.
+   /// Cancels on stop; returns the asio error_code and resulting socket.
+   inline io::awaitable<std::tuple<boost::system::error_code, tcp::socket>> accept_one(tcp::acceptor &acceptor,
+                                                                                       std::stop_token token)
+   {
+      auto executor = co_await this_coro::executor;
+      auto watchdog = cancel_on_stop(acceptor, token);
+
+      auto [ec, socket] = co_await acceptor.async_accept(io::make_strand(executor), ioe::as_tuple(io::use_awaitable));
+
+      co_return std::tuple{ec, std::move(socket)};
+   }
+
+   /// Legacy one-shot accept that opens a new acceptor each call.
+   /// Prefer accept_one() with a long-lived accaccept_tcpeptor in production code.
    inline io::awaitable<std::tuple<boost::system::error_code, tcp::socket>> accept_tcp(std::stop_token token,
                                                                                        tcp::endpoint endpoint)
    {
       auto executor = co_await this_coro::executor;
 
-      auto acceptor = tcp::acceptor{executor, endpoint};
-      auto watchdog = cancel_on_stop(acceptor, token);
+      auto open_ec = boost::system::error_code{};
+      auto acceptor = try_open_acceptor(executor, endpoint, open_ec);
+      if (open_ec)
+      {
+         co_return std::tuple{open_ec, tcp::socket{executor}};
+      }
 
-      auto [ec, socket] = co_await acceptor.async_accept(io::make_strand(executor), ioe::as_tuple(io::use_awaitable));
-
+      auto [ec, socket] = co_await accept_one(acceptor, token);
       co_return std::tuple{ec, std::move(socket)};
    }
 } // namespace spider2

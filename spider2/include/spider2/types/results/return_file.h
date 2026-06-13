@@ -28,9 +28,9 @@ namespace spider2
 
    inline auto generate_boundary(chrono::system_clock::time_point time_point, std::uint64_t file_size) -> string
    {
-      boost::mt19937 mt{static_cast<std::uint32_t>(time_point.time_since_epoch().count()) ^
+      boost::random::mt19937 mt{static_cast<std::uint32_t>(time_point.time_since_epoch().count()) ^
                         static_cast<std::uint32_t>(file_size)};
-      boost::uuids::basic_random_generator<boost::mt19937> gen{mt};
+      boost::uuids::basic_random_generator<boost::random::mt19937> gen{mt};
       return boost::lexical_cast<string>(gen());
    }
 

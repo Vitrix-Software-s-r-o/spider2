@@ -111,29 +111,38 @@ namespace spider2
          }
       }
 
+      struct extract_visitor
+      {
+         static auto get_empty_value() -> const std::string &
+         {
+            static std::string empty_value;
+            return empty_value;
+         }
+         auto operator()(auto &&v) -> const std::string &
+         {
+            static_assert(!std::is_rvalue_reference_v<decltype(v)>, "must not be temporary");
+
+            using arg_type = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<arg_type, std::string>)
+            {
+               return v;
+            }
+            else if constexpr (std::is_same_v<arg_type, std::shared_ptr<std::string>>)
+            {
+               if (v != nullptr)
+               {
+                  return *v;
+               }
+            }
+
+            return get_empty_value();
+         }
+      };
+      static auto get_message_buffer(std::variant<std::string, std::shared_ptr<std::string>> &&msg) = delete;
       static auto get_message_buffer(const std::variant<std::string, std::shared_ptr<std::string>> &msg)
           -> const std::string &
       {
-         const std::string &msg_ref = std::visit(
-             [](auto &v) -> const std::string &
-             {
-                using arg_type = std::decay_t<decltype(v)>;
-                if constexpr (std::is_same_v<arg_type, std::string>)
-                {
-                   return v;
-                }
-                else if constexpr (std::is_same_v<arg_type, std::shared_ptr<std::string>>)
-                {
-                   return *v;
-                }
-                else
-                {
-                   static std::string empty;
-                   return empty;
-                }
-             },
-             msg);
-         return msg_ref;
+         return std::visit(extract_visitor{}, msg);
       }
       static auto start_send(websocket_connection_context &ctx) -> io::awaitable<void>
       {
