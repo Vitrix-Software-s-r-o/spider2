@@ -1,0 +1,5 @@
+# Fuzzing corpora, seeds, and crash reproducers are binary blobs whose exact
+# bytes (including CR/LF) are significant. Never apply EOL normalization.
+fuzz/corpus/** -text
+fuzz/corpus_stream/** -text
+fuzz/crashes/** -text
