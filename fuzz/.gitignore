@@ -2,3 +2,4 @@ fuzz_multipart
 crash-*
 minimized-from-*
 leak-*
+run/

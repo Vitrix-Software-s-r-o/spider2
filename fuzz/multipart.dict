@@ -1,0 +1,11 @@
+# libFuzzer dictionary for multipart bodies (tokens the parser keys on).
+crlf="\x0d\x0a"
+dashdash="--"
+boundary_open="\x0d\x0a--"
+header_end="\x0d\x0a\x0d\x0a"
+close_delim="--\x0d\x0a"
+cd="Content-Disposition: form-data"
+name="; name=\"f\""
+filename="; filename=\"a\""
+ct="Content-Type: text/plain"
+boundary_word="boundary"
