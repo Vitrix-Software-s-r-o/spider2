@@ -33,6 +33,9 @@ if (SPIDER2_SANITIZE_THREAD)
 endif ()
 
 
+# Build libFuzzer harnesses under fuzz/ (requires a Clang toolchain).
+option(SPIDER2_FUZZ "Enable building of libFuzzer harnesses" OFF)
+
 # this is a private Vitrix Software, s.r.o. feature
 option(SPIDER2_INTEGRATE_VITRIX_SERIALIZATION "Enable building of Vitrix Software serialization library" OFF)
 
@@ -68,5 +71,9 @@ endif ()
 if (SPIDER2_TRACY)
     add_subdirectory(spider2-tracy)
 endif()
+
+if (SPIDER2_FUZZ)
+    add_subdirectory(fuzz)
+endif ()
 
 

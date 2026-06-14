@@ -660,3 +660,42 @@ TEST_CASE("test multipart_parser - buffer size exactly at boundary", "[multipart
    REQUIRE(!ec);
    REQUIRE(handler.parts_count == 1);
 }
+
+namespace
+{
+   // Feed a raw (possibly malformed / non-UTF8) body to a fresh parser and return
+   // the resulting error_code. The point of these cases is that the parser must
+   // never read/advance past the buffer end — under ASan/UBSan a regression here
+   // is a hard failure regardless of the assertions below.
+   auto run_raw(std::string_view boundary, std::string_view body) -> error_code
+   {
+      test_message_handler handler;
+      multipart_message_parser parser{boundary, handler};
+      error_code ec;
+      parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(body.data()), body.size()}, ec);
+      parser.on_finish(ec);
+      return ec;
+   }
+} // namespace
+
+// Regression cases discovered by the libFuzzer harness in fuzz/. Each one used to
+// drive `it` past `end` (out-of-bounds read / std::length_error). They must now
+// terminate cleanly with an error rather than crashing.
+TEST_CASE("multipart_parser fuzz regressions - empty boundary is rejected", "[multipart_parser][regression]")
+{
+   // An empty boundary can never delimit anything; it must be rejected, not parsed.
+   REQUIRE(run_raw("", "--\r\n\r"));
+   REQUIRE(run_raw("", std::string_view{"\0--\r\n\r", 6}));
+   REQUIRE(run_raw("", "\n--\r\n\r"));
+   REQUIRE(run_raw("", "-\n\ry\r-;\r--\r\n\r"));
+   REQUIRE(run_raw("", "\r\r\r\xef\n\xa1y\r\n\r\n\r\n--\r\n\r"));
+}
+
+TEST_CASE("multipart_parser fuzz regressions - truncated delimiter", "[multipart_parser][regression]")
+{
+   // Body ends in the middle of a delimiter: a partial token must not falsely match
+   // and over-advance the cursor. Incomplete input -> error, not crash.
+   REQUIRE(run_raw("boundary", "--boundary\r\n\r"));
+   REQUIRE(run_raw("b", "--)--,--:\b\r\n--\x2d"));
+   REQUIRE(run_raw("-", "\b\r\n----"));
+}
