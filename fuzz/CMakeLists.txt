@@ -24,3 +24,4 @@ function(spider2_add_fuzzer name source)
 endfunction()
 
 spider2_add_fuzzer(fuzz_multipart fuzz_multipart.cpp)
+spider2_add_fuzzer(fuzz_multipart_stream fuzz_multipart_stream.cpp)

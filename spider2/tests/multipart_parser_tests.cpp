@@ -699,3 +699,38 @@ TEST_CASE("multipart_parser fuzz regressions - truncated delimiter", "[multipart
    REQUIRE(run_raw("b", "--)--,--:\b\r\n--\x2d"));
    REQUIRE(run_raw("-", "\b\r\n----"));
 }
+
+TEST_CASE("multipart_parser streaming - body fed in small chunks across buffer fill",
+          "[multipart_parser][regression]")
+{
+   // Build a body larger than the internal buffer (max_part_header_size = 8096) so it
+   // fills and re-buffers several times, then feed it in small chunks. This exercises
+   // the on_data() copy loop where the buffer fills mid-chunk: previously the copy was
+   // bounded by the whole span instead of the unconsumed remainder, reading past the
+   // input (heap-buffer-overflow under ASan; corrupted parse otherwise).
+   std::string body;
+   constexpr int part_count = 60;
+   for (int i = 0; i < part_count; ++i)
+   {
+      body += "--boundary\r\n";
+      body += "Content-Disposition: form-data; name=\"f" + std::to_string(i) + "\"\r\n\r\n";
+      body += "payload-" + std::to_string(i) + "-" + std::string(200, 'x') + "\r\n";
+   }
+   body += "--boundary--\r\n";
+   REQUIRE(body.size() > multipart_message_parser<test_message_handler>::max_part_header_size);
+
+   auto handler = test_message_handler{};
+   auto parser = multipart_message_parser{"boundary", handler};
+
+   error_code ec;
+   constexpr std::size_t chunk = 100; // small relative to the 8096 buffer -> fills mid-chunk
+   for (std::size_t off = 0; off < body.size() && !ec; off += chunk)
+   {
+      const auto n = std::min(chunk, body.size() - off);
+      parser.on_data(std::span<const std::byte>{reinterpret_cast<const std::byte *>(body.data() + off), n}, ec);
+   }
+   parser.on_finish(ec);
+
+   REQUIRE(!ec);
+   REQUIRE(handler.parts_count == part_count);
+}

@@ -46,7 +46,11 @@ namespace spider2
 
          for (std::size_t consumed = 0; consumed < data.size() && !ec;)
          {
-            const auto remaining = std::min(buffer_.capacity() - buffer_.size(), data.size());
+            // Bytes to copy this iteration: bounded by free buffer space AND by the
+            // bytes still unconsumed in `data`. Using data.size() here (instead of the
+            // remaining data.size() - consumed) over-reads past the span once the buffer
+            // fills mid-span and the loop comes round again with consumed > 0.
+            const auto remaining = std::min(buffer_.capacity() - buffer_.size(), data.size() - consumed);
             if (remaining == 0)
             {
                ec = make_error_code(request_error_code::body_read_error);
