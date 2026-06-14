@@ -1,4 +1,4 @@
-#include "spider2/spider2.h"
+#include <spider2/spider2.h>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <fmt/chrono.h>
 #include <iostream>
@@ -103,7 +103,7 @@ int main()
    auto app = app_context_base{.token = stop_src.get_token()};
    auto simple_app =
        begin_app() + on_scope("/ws", websocket_handler(ws_events)) +
-       on_scope("/", static_files(executable_directory_path / "test-site", {.index_files = {"index.html"s}}));
+       on_scope("/", static_files(executable_directory_path / "site", {.index_files = {"index.html"s}}));
 
    std::cout << "Starting server on http://localhost:3000" << std::endl;
    run_web_app(io_loop,

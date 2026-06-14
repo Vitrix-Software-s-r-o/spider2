@@ -20,30 +20,35 @@
   <component name="CMakeRunConfigurationManager">
     <generated>
       <config projectName="spider2" targetName="spider2-proxy" />
-      <config projectName="spider2" targetName="spider2-tests" />
       <config projectName="spider2" targetName="spider2-prometheus" />
       <config projectName="spider2" targetName="spider2-prometheus-tests" />
       <config projectName="spider2" targetName="spider2-react" />
+      <config projectName="spider2" targetName="spider2-websockets-example" />
+      <config projectName="spider2" targetName="fuzz_multipart" />
+      <config projectName="spider2" targetName="fuzz_multipart_stream" />
+      <config projectName="spider2" targetName="spider2-tests" />
       <config projectName="spider2" targetName="spider2-api-tests" />
       <config projectName="spider2" targetName="spider2" />
       <config projectName="spider2" targetName="spider2-api" />
+      <config projectName="spider2" targetName="spider2-react-example" />
       <config projectName="spider2" targetName="spider2-proxy-example" />
-      <config projectName="spider2" targetName="spider2-example" />
       <config projectName="spider2" targetName="spider2-testing" />
-      <config projectName="spider2" targetName="fuzz_multipart" />
     </generated>
   </component>
   <component name="CMakeSettings">
     <configurations>
-      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" TOOLCHAIN_NAME="Default" GENERATION_OPTIONS="-G Ninja -DCMAKE_TOOLCHAIN_FILE=/home/jan/Workspaces/vcpkg-ms/scripts/buildsystems/vcpkg.cmake -DSPIDER2_TESTS=ON" />
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" TOOLCHAIN_NAME="Default" GENERATION_OPTIONS="-G Ninja -DCMAKE_TOOLCHAIN_FILE=/home/jan/Workspaces/vcpkg-ms/scripts/buildsystems/vcpkg.cmake -DSPIDER2_TESTS=ON -DSPIDER2_EXAMPLES=ON" />
       <configuration PROFILE_NAME="Debug-Clang" ENABLED="true" CONFIG_NAME="Debug" TOOLCHAIN_NAME="Clang" GENERATION_OPTIONS="-G Ninja -DCMAKE_TOOLCHAIN_FILE=/home/jan/Workspaces/vcpkg-ms/scripts/buildsystems/vcpkg.cmake -DSPIDER2_TESTS=ON  -DSPIDER2_FUZZ=ON" />
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="be3eeae5-261a-4b63-bbfd-9b0773d6eb3c" name="Changes" comment="added corpus files">
-      <change beforePath="$PROJECT_DIR$/.idea/spider2.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/spider2.iml" afterDir="false" />
+    <list default="true" id="be3eeae5-261a-4b63-bbfd-9b0773d6eb3c" name="Changes" comment="fixed memory bug and added corpus files">
+      <change afterPath="$PROJECT_DIR$/spider2/examples/CMakeLists.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/spider2/examples/websockets/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fuzz/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/fuzz/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spider2/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/spider2/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spider2/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/spider2/examples/websockets/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spider2/test-site/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/spider2/examples/websockets/site/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -55,7 +60,14 @@
       <entry key="_/home/jan/Workspaces/spider2" value="2xD7whVLlI3VGN7VGMn0gxsbPBU" />
     </persistenceIdMap>
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug-Clang" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="CMakeLists.txt" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -78,7 +90,9 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "C/C++ File.main.cpp.executor": "Run",
     "CMake Application.fuzz_multipart.executor": "Run",
+    "CMake Application.spider2-example.executor": "Run",
     "Catch.All in multipart_parser_tests.cpp.executor": "Run",
     "Catch.spider2-tests.executor": "Run",
     "Catch.test multipart_parser - body part with no headers.executor": "Run",
@@ -106,7 +120,7 @@
     "cidr.known.project.marker": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "ctest.advertisement.all.test.configuration.is.created": "true",
-    "git-widget-placeholder": "file-upload",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "/home/jan/Workspaces/spider2",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -117,12 +131,13 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Catch.spider2-tests">
-    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
-      </method>
-    </configuration>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/spider2/examples/websockets/site" />
+      <recent name="$PROJECT_DIR$/spider2/examples/websockets" />
+    </key>
+  </component>
+  <component name="RunManager" selected="CMake Application.spider2-websockets-example">
     <configuration name="All in multipart_parser_tests.cpp" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-tests" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-tests" TEST_PATTERN="[#multipart_parser_tests]" TEST_MODE="PATTERN">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
@@ -153,16 +168,15 @@
         <option name="BeforeTestRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="test multipart_parser - boundary at start of line without CRLF prefix" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-tests" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-tests" TEST_CLASS="[flaw][multipart_parser]" TEST_METHOD="test multipart_parser - boundary at start of line without CRLF prefix" TEST_MODE="SUITE_TEST">
+    <configuration name="test multipart_parser - multiple consecutive boundaries" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-tests" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-tests" TEST_CLASS="[failure][multipart_parser]" TEST_METHOD="test multipart_parser - multiple consecutive boundaries" TEST_MODE="SUITE_TEST">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
         <option name="BeforeTestRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="test multipart_parser - multiple consecutive boundaries" type="CMakeCatchTestRunConfigurationType" factoryName="Catch Test" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-tests" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-tests" TEST_CLASS="[failure][multipart_parser]" TEST_METHOD="test multipart_parser - multiple consecutive boundaries" TEST_MODE="SUITE_TEST">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-        <option name="BeforeTestRunTask" enabled="true" />
       </method>
     </configuration>
     <configuration name="fuzz_multipart" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="-jobs=8 -workers=8 $PROJECT_DIR$/fuzz/corpus" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="fuzz_multipart" CONFIG_NAME="Debug-Clang" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="fuzz_multipart">
@@ -170,12 +184,12 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="spider2-api" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-api" CONFIG_NAME="Debug">
+    <configuration name="fuzz_multipart_stream" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="fuzz_multipart_stream" CONFIG_NAME="Debug-Clang" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="fuzz_multipart_stream">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="spider2-example" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-example" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-example">
+    <configuration name="spider2-api" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-api" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -195,12 +209,22 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
+    <configuration name="spider2-react-example" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-react-example" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-react-example">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="spider2-react" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-react" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
     <configuration name="spider2-testing" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-testing" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="spider2-websockets-example" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="spider2-websockets-example" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="spider2" RUN_TARGET_NAME="spider2-websockets-example">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -216,6 +240,12 @@
         <option name="BeforeTestRunTask" enabled="true" />
       </method>
     </configuration>
+    <configuration name="main.cpp" type="CppFileRunConfiguration" factoryName="CppFileRunConfiguration" temporary="true" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="spider2" TARGET_NAME="main.cpp" CONFIG_NAME="main.cpp">
+      <option name="sourceFile" value="spider2/examples/websockets/main.cpp" />
+      <method v="2">
+        <option name="com.jetbrains.cidr.cpp.runfile.CppFileBuildBeforeRunTaskProvider$BasicBuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
       <deployment type="docker-compose.yml">
         <settings />
@@ -223,31 +253,33 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="C/C++ File.main.cpp" />
       <item itemvalue="Catch.spider2-api-tests" />
       <item itemvalue="Catch.spider2-prometheus-tests" />
       <item itemvalue="Catch.All in multipart_parser_tests.cpp" />
       <item itemvalue="Catch.spider2-tests" />
       <item itemvalue="Catch.test multipart_parser - body part with no headers" />
-      <item itemvalue="Catch.test multipart_parser - boundary at start of line without CRLF prefix" />
       <item itemvalue="Catch.test multipart_parser - multiple consecutive boundaries" />
+      <item itemvalue="CMake Application.spider2-websockets-example" />
       <item itemvalue="CMake Application.fuzz_multipart" />
+      <item itemvalue="CMake Application.fuzz_multipart_stream" />
       <item itemvalue="CMake Application.spider2" />
       <item itemvalue="CMake Application.spider2-api" />
-      <item itemvalue="CMake Application.spider2-example" />
       <item itemvalue="CMake Application.spider2-prometheus" />
       <item itemvalue="CMake Application.spider2-proxy" />
       <item itemvalue="CMake Application.spider2-proxy-example" />
       <item itemvalue="CMake Application.spider2-react" />
+      <item itemvalue="CMake Application.spider2-react-example" />
       <item itemvalue="CMake Application.spider2-testing" />
       <item itemvalue="CTest Application.All CTest" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="C/C++ File.main.cpp" />
         <item itemvalue="Catch.spider2-tests" />
         <item itemvalue="Catch.All in multipart_parser_tests.cpp" />
         <item itemvalue="Catch.test multipart_parser - multiple consecutive boundaries" />
         <item itemvalue="Catch.test multipart_parser - body part with no headers" />
-        <item itemvalue="Catch.test multipart_parser - boundary at start of line without CRLF prefix" />
       </list>
     </recent_temporary>
   </component>
@@ -275,6 +307,7 @@
       <workItem from="1757617500624" duration="2540000" />
       <workItem from="1757929295191" duration="11000" />
       <workItem from="1781375997314" duration="7823000" />
+      <workItem from="1781430699125" duration="3695000" />
     </task>
     <task id="LOCAL-00001" summary="working gcc 15 under spider2-build:latest">
       <option name="closed" value="true" />
@@ -380,7 +413,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781422757175</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="fixed memory bug and added corpus files">
+      <option name="closed" value="true" />
+      <created>1781430812751</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1781430812751</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -417,7 +458,8 @@
     <MESSAGE value="fixed warnings" />
     <MESSAGE value="added .gitignore" />
     <MESSAGE value="added corpus files" />
-    <option name="LAST_COMMIT_MESSAGE" value="added corpus files" />
+    <MESSAGE value="fixed memory bug and added corpus files" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed memory bug and added corpus files" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
